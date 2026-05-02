@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Personal_work\\Projects\\Blood_doner_app\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{FC7D91D3-F677-6254-70F7-07C61EBCBE7B}|backend\\BloodDonor.API\\src\\BloodDonor.Api\\BloodDonor.Api.csproj|d:\\personal_work\\projects\\blood_doner_app\\backend\\blooddonor.api\\src\\blooddonor.api\\endpoints\\donors\\donorendpoints.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FC7D91D3-F677-6254-70F7-07C61EBCBE7B}|backend\\BloodDonor.API\\src\\BloodDonor.Api\\BloodDonor.Api.csproj|solutionrelative:backend\\blooddonor.api\\src\\blooddonor.api\\endpoints\\donors\\donorendpoints.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "DonorEndpoints.cs",
+              "DocumentMoniker": "D:\\Personal_work\\Projects\\Blood_doner_app\\backend\\BloodDonor.API\\src\\BloodDonor.Api\\Endpoints\\Donors\\DonorEndpoints.cs",
+              "RelativeDocumentMoniker": "backend\\BloodDonor.API\\src\\BloodDonor.Api\\Endpoints\\Donors\\DonorEndpoints.cs",
+              "ToolTip": "D:\\Personal_work\\Projects\\Blood_doner_app\\backend\\BloodDonor.API\\src\\BloodDonor.Api\\Endpoints\\Donors\\DonorEndpoints.cs",
+              "RelativeToolTip": "backend\\BloodDonor.API\\src\\BloodDonor.Api\\Endpoints\\Donors\\DonorEndpoints.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-02T02:43:39.766Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

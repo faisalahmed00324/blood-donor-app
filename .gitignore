@@ -1,0 +1,20 @@
+# Build outputs
+bin/
+obj/
+TestResults/
+
+# .NET user files
+*.user
+*.suo
+
+# Node
+node_modules/
+dist/
+
+# Env files
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/

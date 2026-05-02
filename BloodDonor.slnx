@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/backend/" />
+  <Folder Name="/backend/BloodDonor.API/" />
+  <Folder Name="/backend/BloodDonor.API/src/">
+    <Project Path="backend/BloodDonor.API/src/BloodDonor.Api/BloodDonor.Api.csproj" />
+    <Project Path="backend/BloodDonor.API/src/BloodDonor.Application/BloodDonor.Application.csproj" />
+    <Project Path="backend/BloodDonor.API/src/BloodDonor.Domain/BloodDonor.Domain.csproj" />
+    <Project Path="backend/BloodDonor.API/src/BloodDonor.Infrastructure/BloodDonor.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/backend/BloodDonor.API/tests/">
+    <Project Path="backend/BloodDonor.API/tests/BloodDonor.Api.IntegrationTests/BloodDonor.Api.IntegrationTests.csproj" />
+    <Project Path="backend/BloodDonor.API/tests/BloodDonor.Application.Tests/BloodDonor.Application.Tests.csproj" />
+  </Folder>
+</Solution>

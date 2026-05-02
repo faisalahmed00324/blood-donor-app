@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY ["backend/BloodDonor.API/src/BloodDonor.Api/BloodDonor.Api.csproj", "backend/BloodDonor.API/src/BloodDonor.Api/"]
+COPY ["backend/BloodDonor.API/src/BloodDonor.Application/BloodDonor.Application.csproj", "backend/BloodDonor.API/src/BloodDonor.Application/"]
+COPY ["backend/BloodDonor.API/src/BloodDonor.Domain/BloodDonor.Domain.csproj", "backend/BloodDonor.API/src/BloodDonor.Domain/"]
+COPY ["backend/BloodDonor.API/src/BloodDonor.Infrastructure/BloodDonor.Infrastructure.csproj", "backend/BloodDonor.API/src/BloodDonor.Infrastructure/"]
+RUN dotnet restore "backend/BloodDonor.API/src/BloodDonor.Api/BloodDonor.Api.csproj"
+
+COPY . .
+RUN dotnet publish "backend/BloodDonor.API/src/BloodDonor.Api/BloodDonor.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "BloodDonor.Api.dll"]
