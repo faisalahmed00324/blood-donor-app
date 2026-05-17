@@ -1,6 +1,6 @@
 import type { AuthResponse, LoginRequest, RefreshRequest, RegisterRequest } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:7186";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "https://localhost:7186";
 
 async function request<TRequest, TResponse>(path: string, body: TRequest): Promise<TResponse> {
   const response = await fetch(`${API_BASE_URL}${path}`, {

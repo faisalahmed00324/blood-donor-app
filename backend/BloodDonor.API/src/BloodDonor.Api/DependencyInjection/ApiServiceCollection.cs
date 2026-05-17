@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using System.Threading.RateLimiting;
 
 namespace BloodDonor.Api.DependencyInjection;
@@ -10,7 +10,6 @@ public static class ApiServiceCollection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
-        services.AddOpenApi();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
@@ -28,21 +27,6 @@ public static class ApiServiceCollection
                 BearerFormat = "JWT",
                 In = ParameterLocation.Header,
                 Description = "Enter: Bearer {your JWT token}"
-            });
-
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = JwtBearerDefaults.AuthenticationScheme
-                        }
-                    },
-                    Array.Empty<string>()
-                }
             });
         });
 
