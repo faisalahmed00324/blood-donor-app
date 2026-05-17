@@ -1,7 +1,10 @@
-import { Badge, Box, Button, Container, Heading, HStack, Stack, Text } from "@chakra-ui/react";
+import { Flex, Spinner, Text } from "@chakra-ui/react";
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/auth-context";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ProtectedRoute } from "./components/auth/protected-route";
+import { AppLayout } from "./components/layout/app-layout";
+import { AuthProvider } from "./context/auth-context";
+import { ToastProvider } from "./context/toast-context";
 
 const DashboardPage = lazy(() => import("./pages/dashboard/dashboard-page").then((m) => ({ default: m.DashboardPage })));
 const LoginPage = lazy(() => import("./pages/auth/login-page").then((m) => ({ default: m.LoginPage })));
@@ -11,60 +14,53 @@ const RequestsPage = lazy(() => import("./pages/requests/requests-page").then((m
 const SearchPage = lazy(() => import("./pages/search/search-page").then((m) => ({ default: m.SearchPage })));
 const NotificationsPage = lazy(() => import("./pages/notifications/notifications-page").then((m) => ({ default: m.NotificationsPage })));
 
+function PageLoader() {
+  return (
+    <Flex minH="60vh" align="center" justify="center" direction="column" gap={3}>
+      <Spinner size="xl" color="red.500" />
+      <Text color="gray.500">Loading...</Text>
+    </Flex>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </BrowserRouter>
-  );
-}
-
-function AppContent() {
-  const { auth } = useAuth();
-
-  return (
-    <Box minH="100vh" bg="gray.50" py={{ base: 10, md: 16 }}>
-      <Container maxW="4xl">
-        <Stack gap={8}>
-          <Stack gap={3}>
-            <Badge w="fit-content" colorPalette="green" variant="subtle">
-              BloodConnect MVP
-            </Badge>
-            <Heading size={{ base: "2xl", md: "3xl" }}>
-              Donor network foundation is ready
-            </Heading>
-            <Text color="gray.600" fontSize="lg" maxW="3xl">
-              Phase 1 initializes clean backend boundaries, Chakra UI setup, and deployment files for Oracle
-              Free tier.
-            </Text>
-          </Stack>
-
-          <HStack gap={3} wrap="wrap">
-            <Button asChild colorPalette="green"><Link to="/auth/register">Get Started</Link></Button>
-            <Button asChild variant="outline"><Link to="/auth/login">Login</Link></Button>
-            <Button asChild variant="outline"><Link to="/dashboard">Dashboard</Link></Button>
-            <Button asChild variant="outline"><Link to="/donor/profile">Donor Profile</Link></Button>
-            <Button asChild variant="outline"><Link to="/requests">Requests</Link></Button>
-            <Button asChild variant="outline"><Link to="/search">Search</Link></Button>
-            <Button asChild variant="outline"><Link to="/notifications">Notifications</Link></Button>
-          </HStack>
-
-          <Suspense fallback={<Text color="gray.600">Loading page...</Text>}>
+        <ToastProvider>
+          <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Text color="gray.600">Choose an action to continue.</Text>} />
+              {/* Public routes */}
               <Route path="/auth/login" element={<LoginPage />} />
               <Route path="/auth/register" element={<RegisterPage />} />
-              <Route path="/dashboard" element={auth ? <DashboardPage /> : <Navigate to="/auth/login" replace />} />
-              <Route path="/donor/profile" element={auth ? <DonorProfilePage /> : <Navigate to="/auth/login" replace />} />
-              <Route path="/requests" element={auth ? <RequestsPage /> : <Navigate to="/auth/login" replace />} />
-              <Route path="/search" element={auth ? <SearchPage /> : <Navigate to="/auth/login" replace />} />
-              <Route path="/notifications" element={auth ? <NotificationsPage /> : <Navigate to="/auth/login" replace />} />
+
+              {/* Protected routes with layout */}
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/donor/profile" element={
+                  <ProtectedRoute allowedRoles={["Donor"]}>
+                    <DonorProfilePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/requests" element={
+                  <ProtectedRoute allowedRoles={["Seeker", "Hospital"]}>
+                    <RequestsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/search" element={
+                  <ProtectedRoute allowedRoles={["Seeker", "Hospital"]}>
+                    <SearchPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/notifications" element={<NotificationsPage />} />
+              </Route>
+
+              {/* Default redirect */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
-        </Stack>
-      </Container>
-    </Box>
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

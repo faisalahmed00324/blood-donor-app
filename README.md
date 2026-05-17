@@ -3,7 +3,7 @@
 This repository contains a low-resource MVP implementation of BloodConnect using:
 
 - Backend: ASP.NET Core 10 Minimal API with clean architecture boundaries
-- Frontend: React 19 + Vite + TypeScript + Chakra UI
+- Frontend: React 19 + Vite + TypeScript + Chakra UI v3
 - Database: PostgreSQL 16 (Docker for local development)
 
 ## Structure
@@ -15,6 +15,32 @@ This repository contains a low-resource MVP implementation of BloodConnect using
 - `backend/BloodDonor.API/tests`
 - `frontend/blood-donor-web`
 - `deployment`
+
+## Frontend Architecture
+
+### State Management
+- **AuthContext** (`useContext` + `useAuth` hook): Manages authentication state with localStorage persistence, automatic token expiry checks, cross-tab synchronization, role helpers (`isAuthenticated`, `userRole`, `hasRole`), and logout functionality.
+- **ToastContext** (`useContext` + `useToast` hook): Provides a centralized toast notification system with `success`, `error`, `warning`, and `info` methods for user feedback across all pages.
+
+### Routing & Navigation
+- **React Router v7** with nested route layout using `<Outlet />`
+- **ProtectedRoute** component guards authenticated routes and enforces role-based access control
+- **AppLayout** provides a responsive top navigation bar with role-aware menu items
+- Public routes: `/auth/login`, `/auth/register`
+- Protected routes: `/dashboard`, `/donor/profile` (Donor only), `/requests` (Seeker/Hospital), `/search` (Seeker/Hospital), `/notifications`
+
+### Roles
+- **Donor**: Can manage their donor profile and availability
+- **Seeker**: Can create blood requests and search for donors
+- **Hospital**: Can create blood requests and search for donors
+
+### UI Features
+- Modern card-based layouts with Chakra UI v3
+- Form validation with inline error messages on all forms
+- Toast notifications for all success/error/warning states
+- Responsive design with mobile hamburger menu
+- Loading states and empty state placeholders
+- Lazy-loaded pages with code splitting via `React.lazy`
 
 ## Local Setup
 
@@ -42,5 +68,5 @@ Frontend env example:
 ## Notes
 
 - The current backend includes auth, donor profile, request workflow, donor search, and in-app notification pipeline.
-- The frontend provides initial pages for auth, donor profile, requests, search, notifications, and dashboard.
+- The frontend provides a modern UI with role-based navigation, form validation, toast notifications, and proper state management using React Context.
 - For Oracle free-tier usage, keep PostgreSQL memory and connection settings conservative.
