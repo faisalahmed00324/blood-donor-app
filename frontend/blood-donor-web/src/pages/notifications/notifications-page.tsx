@@ -1,48 +1,82 @@
-import { Alert, Box, Heading, List, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Flex, Heading, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { listNotifications, type NotificationDto } from "../../api/notifications";
 import { useAuth } from "../../context/auth-context";
+import { useToast } from "../../context/toast-context";
+
+function NotificationCard({ notification }: { notification: NotificationDto }) {
+  return (
+    <Box
+      bg={notification.isRead ? "white" : "red.50"}
+      p={5}
+      borderRadius="xl"
+      borderWidth="1px"
+      borderColor={notification.isRead ? "gray.200" : "red.200"}
+      shadow="sm"
+    >
+      <Flex justify="space-between" align="start" mb={2} wrap="wrap" gap={2}>
+        <Text fontWeight="semibold" fontSize="md" color="gray.800">
+          {notification.title}
+        </Text>
+        <Flex gap={2}>
+          {!notification.isRead && (
+            <Badge colorPalette="red" variant="subtle" size="sm">New</Badge>
+          )}
+          <Text fontSize="xs" color="gray.400">
+            {new Date(notification.createdAtUtc).toLocaleString()}
+          </Text>
+        </Flex>
+      </Flex>
+      <Text color="gray.600" fontSize="sm">{notification.message}</Text>
+    </Box>
+  );
+}
 
 export function NotificationsPage() {
   const { auth } = useAuth();
+  const toast = useToast();
   const [items, setItems] = useState<NotificationDto[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) {
-      return;
-    }
-
+    if (!auth) return;
     void (async () => {
       try {
         const result = await listNotifications(auth);
         setItems(result.items);
       } catch {
-        setError("Failed to load notifications.");
+        toast.error("Load failed", "Could not load notifications.");
+      } finally {
+        setLoading(false);
       }
     })();
   }, [auth]);
 
-  if (!auth) {
-    return <Text color="gray.600">Please login first.</Text>;
-  }
+  if (!auth) return null;
 
   return (
-    <Box bg="white" p={6} borderRadius="lg" borderWidth="1px">
-      <Stack gap={4}>
-        <Heading size="lg">Notifications</Heading>
-        {error ? <Alert.Root status="error"><Alert.Indicator /><Alert.Content>{error}</Alert.Content></Alert.Root> : null}
-        <List.Root gap={3}>
+    <Stack gap={6}>
+      <Box>
+        <Heading size="2xl" color="gray.800" mb={2}>Notifications</Heading>
+        <Text color="gray.500">Stay updated with your blood donation activity</Text>
+      </Box>
+
+      {loading ? (
+        <Flex justify="center" py={10}>
+          <Text color="gray.500">Loading notifications...</Text>
+        </Flex>
+      ) : items.length === 0 ? (
+        <Box bg="white" p={10} borderRadius="xl" borderWidth="1px" shadow="sm" textAlign="center">
+          <Text fontSize="lg" color="gray.400" mb={2}>🔔</Text>
+          <Text color="gray.500">No notifications yet</Text>
+        </Box>
+      ) : (
+        <Stack gap={3}>
           {items.map((item) => (
-            <List.Item key={item.id}>
-              <Stack gap={1}>
-                <Text fontWeight="semibold">{item.title}</Text>
-                <Text color="gray.600">{item.message}</Text>
-              </Stack>
-            </List.Item>
+            <NotificationCard key={item.id} notification={item} />
           ))}
-        </List.Root>
-      </Stack>
-    </Box>
+        </Stack>
+      )}
+    </Stack>
   );
 }
