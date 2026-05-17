@@ -25,7 +25,12 @@ This repository contains a low-resource MVP implementation of BloodConnect using
 3. Run frontend:
    - `cd frontend/blood-donor-web`
    - `npm install`
+   - Ensure `VITE_API_URL` is set in `.env` if your API is not running on `https://localhost:7186`
    - `npm run dev`
+
+Frontend env example:
+- `frontend/blood-donor-web/.env.example`
+- Default local API URL: `https://localhost:7186`
 
 ## Testing
 
