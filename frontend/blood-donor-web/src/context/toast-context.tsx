@@ -51,10 +51,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {(toast) => (
           <Toast.Root>
             <ToastIndicator />
-            <Toast.Root>
-              {toast.title && <ToastTitle>{toast.title}</ToastTitle>}
-              {toast.description && <ToastDescription>{toast.description}</ToastDescription>}
-            </Toast.Root>
+            {toast.title && <ToastTitle>{toast.title}</ToastTitle>}
+            {toast.description && <ToastDescription>{toast.description}</ToastDescription>}
             <ToastCloseTrigger />
           </Toast.Root>
         )}
