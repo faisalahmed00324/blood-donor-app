@@ -77,7 +77,7 @@ export function DonorProfilePage() {
     const e: Record<string, string> = {};
     if (!city.trim()) e.city = "City is required.";
     if (!dateOfBirth) e.dateOfBirth = "Date of birth is required.";
-    if (Number(weightKg) < 45) e.weightKg = "Minimum weight is 45 kg.";
+    if (Number(weightKg) < 50) e.weightKg = "Minimum weight is 50 kg.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -181,7 +181,7 @@ export function DonorProfilePage() {
                 <Box flex="1" minW="200px">
                   <Field.Root invalid={!!errors.weightKg}>
                     <Field.Label fontWeight="medium">Weight (kg)</Field.Label>
-                    <Input type="number" min={45} value={weightKg} onChange={(e) => { setWeightKg(e.target.value); clearError("weightKg"); }} size="lg" />
+                    <Input type="number" min={50} value={weightKg} onChange={(e) => { setWeightKg(e.target.value); clearError("weightKg"); }} size="lg" />
                     {errors.weightKg && <Field.ErrorText>{errors.weightKg}</Field.ErrorText>}
                   </Field.Root>
                 </Box>
