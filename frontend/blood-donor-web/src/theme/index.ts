@@ -5,21 +5,21 @@ export const appTheme = defineConfig({
     tokens: {
       colors: {
         brand: {
-          50: { value: "#eef8f3" },
-          100: { value: "#d6ecdf" },
-          200: { value: "#aed8bf" },
-          300: { value: "#86c59f" },
-          400: { value: "#5fb17f" },
-          500: { value: "#3f8f62" },
-          600: { value: "#306f4c" },
-          700: { value: "#235237" },
-          800: { value: "#153521" },
-          900: { value: "#08190d" }
+          50: { value: "#fef2f2" },
+          100: { value: "#fee2e2" },
+          200: { value: "#fecaca" },
+          300: { value: "#fca5a5" },
+          400: { value: "#f87171" },
+          500: { value: "#dc2626" },
+          600: { value: "#b91c1c" },
+          700: { value: "#991b1b" },
+          800: { value: "#7f1d1d" },
+          900: { value: "#450a0a" }
         }
       },
       fonts: {
-        heading: { value: "Poppins, system-ui, sans-serif" },
-        body: { value: "Inter, system-ui, sans-serif" }
+        heading: { value: "'Inter', system-ui, sans-serif" },
+        body: { value: "'Inter', system-ui, sans-serif" }
       }
     }
   }

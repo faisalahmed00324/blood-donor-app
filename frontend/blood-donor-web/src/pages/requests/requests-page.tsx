@@ -1,73 +1,134 @@
-import { Alert, Box, Button, Field, Heading, Input, NativeSelect, Stack, Table, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, Field, Flex, Heading, Input, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { createRequest, listRequests, type BloodRequestDto } from "../../api/requests";
 import { useAuth } from "../../context/auth-context";
+import { useToast } from "../../context/toast-context";
+
+const bloodGroupLabels: Record<number, string> = {
+  1: "A−", 2: "A+", 3: "B−", 4: "B+", 5: "AB−", 6: "AB+", 7: "O−", 8: "O+",
+};
+
+const statusLabels: Record<number, string> = {
+  0: "Pending", 1: "Active", 2: "Fulfilled", 3: "Expired", 4: "Cancelled",
+};
+
+const urgencyLabels: Record<number, string> = {
+  1: "Critical", 2: "Urgent", 3: "Normal",
+};
+
+function RequestCard({ item }: { item: BloodRequestDto }) {
+  const urgencyColor = item.urgencyLevel === 1 ? "red" : item.urgencyLevel === 2 ? "orange" : "green";
+  return (
+    <Box bg="white" p={5} borderRadius="xl" borderWidth="1px" shadow="sm">
+      <Flex justify="space-between" align="start" mb={3} wrap="wrap" gap={2}>
+        <Box>
+          <Text fontWeight="semibold" fontSize="lg" color="gray.800">{item.hospitalName}</Text>
+          <Text fontSize="sm" color="gray.500">{item.hospitalAddress}</Text>
+        </Box>
+        <Flex gap={2}>
+          <Badge colorPalette={urgencyColor} variant="subtle">{urgencyLabels[item.urgencyLevel] ?? "Unknown"}</Badge>
+          <Badge variant="outline">{statusLabels[item.status] ?? "Unknown"}</Badge>
+        </Flex>
+      </Flex>
+      <Flex gap={6} wrap="wrap">
+        <Box>
+          <Text fontSize="xs" color="gray.500">Blood Group</Text>
+          <Text fontWeight="semibold" color="red.600">{bloodGroupLabels[item.bloodGroup] ?? "?"}</Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color="gray.500">Units</Text>
+          <Text fontWeight="semibold">{item.unitsFulfilled}/{item.unitsNeeded}</Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color="gray.500">Required by</Text>
+          <Text fontWeight="semibold">{new Date(item.requiredByDate).toLocaleDateString()}</Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color="gray.500">Contact</Text>
+          <Text fontWeight="semibold">{item.contactPersonName}</Text>
+        </Box>
+      </Flex>
+    </Box>
+  );
+}
 
 export function RequestsPage() {
   const { auth } = useAuth();
+  const toast = useToast();
   const [items, setItems] = useState<BloodRequestDto[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   const [bloodGroup, setBloodGroup] = useState("8");
   const [unitsNeeded, setUnitsNeeded] = useState("1");
   const [urgencyLevel, setUrgencyLevel] = useState("2");
   const [requestType, setRequestType] = useState("1");
   const [patientName, setPatientName] = useState("");
-  const [hospitalName, setHospitalName] = useState("City Hospital");
-  const [hospitalAddress, setHospitalAddress] = useState("Dhaka");
+  const [hospitalName, setHospitalName] = useState("");
+  const [hospitalAddress, setHospitalAddress] = useState("");
   const [latitude, setLatitude] = useState("23.8103");
   const [longitude, setLongitude] = useState("90.4125");
-  const [contactPersonName, setContactPersonName] = useState("Contact Person");
-  const [contactPersonPhone, setContactPersonPhone] = useState("01700000000");
-  const [requiredByDate, setRequiredByDate] = useState("2026-12-31");
+  const [contactPersonName, setContactPersonName] = useState("");
+  const [contactPersonPhone, setContactPersonPhone] = useState("");
+  const [requiredByDate, setRequiredByDate] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!auth) {
-      return;
-    }
-
+    if (!auth) return;
     void (async () => {
       try {
         const result = await listRequests(auth);
         setItems(result.items);
       } catch {
-        setError("Failed to load request list.");
+        toast.error("Load failed", "Could not load requests.");
       }
     })();
   }, [auth]);
 
-  if (!auth) {
-    return <Text color="gray.600">Please login first.</Text>;
-  }
+  if (!auth) return null;
+
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!hospitalName.trim()) e.hospitalName = "Hospital name is required.";
+    if (!hospitalAddress.trim()) e.hospitalAddress = "Hospital address is required.";
+    if (!contactPersonName.trim()) e.contactPersonName = "Contact person is required.";
+    if (!contactPersonPhone.trim()) e.contactPersonPhone = "Contact phone is required.";
+    if (!requiredByDate) e.requiredByDate = "Required date is needed.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const clearError = (field: string) =>
+    setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!validate()) {
+      toast.warning("Validation error", "Please fill all required fields.");
+      return;
+    }
     setLoading(true);
-    setError(null);
-    setMessage(null);
     try {
       await createRequest(auth, {
         bloodGroup: Number(bloodGroup),
         unitsNeeded: Number(unitsNeeded),
         urgencyLevel: Number(urgencyLevel),
         requestType: Number(requestType),
-        patientName,
+        patientName: patientName || undefined,
         hospitalName,
         hospitalAddress,
         latitude: Number(latitude),
         longitude: Number(longitude),
         contactPersonName,
         contactPersonPhone,
-        requiredByDate
+        requiredByDate,
       });
-
       const result = await listRequests(auth);
       setItems(result.items);
-      setMessage("Request created successfully.");
+      toast.success("Request created", "Your blood request has been submitted.");
+      setShowForm(false);
     } catch {
-      setError("Failed to create request.");
+      toast.error("Failed", "Could not create the request. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -75,99 +136,146 @@ export function RequestsPage() {
 
   return (
     <Stack gap={6}>
-      <Box bg="white" p={6} borderRadius="lg" borderWidth="1px">
-        <form onSubmit={onSubmit}>
-          <Stack gap={4}>
-            <Heading size="lg">Create blood request</Heading>
-            <Text color="gray.600">Create urgent or scheduled requests for matching donors.</Text>
+      <Flex justify="space-between" align="center" wrap="wrap" gap={4}>
+        <Box>
+          <Heading size="2xl" color="gray.800" mb={1}>Blood Requests</Heading>
+          <Text color="gray.500">Manage and create blood donation requests</Text>
+        </Box>
+        <Button colorPalette="red" size="lg" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "+ New Request"}
+        </Button>
+      </Flex>
 
-            {message ? <Alert.Root status="success"><Alert.Indicator /><Alert.Content>{message}</Alert.Content></Alert.Root> : null}
-            {error ? <Alert.Root status="error"><Alert.Indicator /><Alert.Content>{error}</Alert.Content></Alert.Root> : null}
+      {showForm && (
+        <Box bg="white" p={8} borderRadius="xl" borderWidth="1px" shadow="sm">
+          <Heading size="md" color="gray.700" mb={5}>New Blood Request</Heading>
+          <form onSubmit={onSubmit}>
+            <Stack gap={5}>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Blood Group</Field.Label>
+                    <NativeSelect.Root size="lg">
+                      <NativeSelect.Field value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)}>
+                        {Object.entries(bloodGroupLabels).map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Units Needed</Field.Label>
+                    <Input type="number" min={1} value={unitsNeeded} onChange={(e) => setUnitsNeeded(e.target.value)} size="lg" />
+                  </Field.Root>
+                </Box>
+              </Flex>
 
-            <Field.Root>
-              <Field.Label>Blood group</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)}>
-                  <option value="1">A-</option>
-                  <option value="2">A+</option>
-                  <option value="3">B-</option>
-                  <option value="4">B+</option>
-                  <option value="5">AB-</option>
-                  <option value="6">AB+</option>
-                  <option value="7">O-</option>
-                  <option value="8">O+</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Urgency</Field.Label>
+                    <NativeSelect.Root size="lg">
+                      <NativeSelect.Field value={urgencyLevel} onChange={(e) => setUrgencyLevel(e.target.value)}>
+                        <option value="1">Critical</option>
+                        <option value="2">Urgent</option>
+                        <option value="3">Normal</option>
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Request Type</Field.Label>
+                    <NativeSelect.Root size="lg">
+                      <NativeSelect.Field value={requestType} onChange={(e) => setRequestType(e.target.value)}>
+                        <option value="1">Urgent</option>
+                        <option value="2">Scheduled</option>
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+                </Box>
+              </Flex>
 
-            <Field.Root>
-              <Field.Label>Units needed</Field.Label>
-              <Input type="number" min={1} value={unitsNeeded} onChange={(e) => setUnitsNeeded(e.target.value)} required />
-            </Field.Root>
+              <Field.Root>
+                <Field.Label fontWeight="medium">Patient Name (optional)</Field.Label>
+                <Input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Patient's name" size="lg" />
+              </Field.Root>
 
-            <Field.Root>
-              <Field.Label>Urgency level</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field value={urgencyLevel} onChange={(e) => setUrgencyLevel(e.target.value)}>
-                  <option value="1">Critical</option>
-                  <option value="2">Urgent</option>
-                  <option value="3">Normal</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root invalid={!!errors.hospitalName}>
+                    <Field.Label fontWeight="medium">Hospital Name</Field.Label>
+                    <Input value={hospitalName} onChange={(e) => { setHospitalName(e.target.value); clearError("hospitalName"); }} size="lg" />
+                    {errors.hospitalName && <Field.ErrorText>{errors.hospitalName}</Field.ErrorText>}
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root invalid={!!errors.hospitalAddress}>
+                    <Field.Label fontWeight="medium">Hospital Address</Field.Label>
+                    <Input value={hospitalAddress} onChange={(e) => { setHospitalAddress(e.target.value); clearError("hospitalAddress"); }} size="lg" />
+                    {errors.hospitalAddress && <Field.ErrorText>{errors.hospitalAddress}</Field.ErrorText>}
+                  </Field.Root>
+                </Box>
+              </Flex>
 
-            <Field.Root>
-              <Field.Label>Request type</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field value={requestType} onChange={(e) => setRequestType(e.target.value)}>
-                  <option value="1">Urgent</option>
-                  <option value="2">Scheduled</option>
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Latitude</Field.Label>
+                    <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} size="lg" />
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Longitude</Field.Label>
+                    <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} size="lg" />
+                  </Field.Root>
+                </Box>
+              </Flex>
 
-            <Field.Root><Field.Label>Patient name</Field.Label><Input value={patientName} onChange={(e) => setPatientName(e.target.value)} /></Field.Root>
-            <Field.Root><Field.Label>Hospital name</Field.Label><Input value={hospitalName} onChange={(e) => setHospitalName(e.target.value)} required /></Field.Root>
-            <Field.Root><Field.Label>Hospital address</Field.Label><Input value={hospitalAddress} onChange={(e) => setHospitalAddress(e.target.value)} required /></Field.Root>
-            <Field.Root><Field.Label>Latitude</Field.Label><Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} required /></Field.Root>
-            <Field.Root><Field.Label>Longitude</Field.Label><Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} required /></Field.Root>
-            <Field.Root><Field.Label>Contact person name</Field.Label><Input value={contactPersonName} onChange={(e) => setContactPersonName(e.target.value)} required /></Field.Root>
-            <Field.Root><Field.Label>Contact person phone</Field.Label><Input value={contactPersonPhone} onChange={(e) => setContactPersonPhone(e.target.value)} required /></Field.Root>
-            <Field.Root><Field.Label>Required by date</Field.Label><Input type="date" value={requiredByDate} onChange={(e) => setRequiredByDate(e.target.value)} required /></Field.Root>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root invalid={!!errors.contactPersonName}>
+                    <Field.Label fontWeight="medium">Contact Person</Field.Label>
+                    <Input value={contactPersonName} onChange={(e) => { setContactPersonName(e.target.value); clearError("contactPersonName"); }} size="lg" />
+                    {errors.contactPersonName && <Field.ErrorText>{errors.contactPersonName}</Field.ErrorText>}
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root invalid={!!errors.contactPersonPhone}>
+                    <Field.Label fontWeight="medium">Contact Phone</Field.Label>
+                    <Input value={contactPersonPhone} onChange={(e) => { setContactPersonPhone(e.target.value); clearError("contactPersonPhone"); }} size="lg" />
+                    {errors.contactPersonPhone && <Field.ErrorText>{errors.contactPersonPhone}</Field.ErrorText>}
+                  </Field.Root>
+                </Box>
+              </Flex>
 
-            <Button type="submit" colorPalette="green" loading={loading}>Create request</Button>
-          </Stack>
-        </form>
-      </Box>
+              <Field.Root invalid={!!errors.requiredByDate}>
+                <Field.Label fontWeight="medium">Required By Date</Field.Label>
+                <Input type="date" value={requiredByDate} onChange={(e) => { setRequiredByDate(e.target.value); clearError("requiredByDate"); }} size="lg" />
+                {errors.requiredByDate && <Field.ErrorText>{errors.requiredByDate}</Field.ErrorText>}
+              </Field.Root>
 
-      <Box bg="white" p={6} borderRadius="lg" borderWidth="1px">
-        <Stack gap={4}>
-          <Heading size="md">Recent requests</Heading>
-          <Table.Root variant="line" size="sm">
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader>Hospital</Table.ColumnHeader>
-                <Table.ColumnHeader>Blood Group</Table.ColumnHeader>
-                <Table.ColumnHeader>Units</Table.ColumnHeader>
-                <Table.ColumnHeader>Status</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {items.map((item) => (
-                <Table.Row key={item.id}>
-                  <Table.Cell>{item.hospitalName}</Table.Cell>
-                  <Table.Cell>{item.bloodGroup}</Table.Cell>
-                  <Table.Cell>{item.unitsFulfilled}/{item.unitsNeeded}</Table.Cell>
-                  <Table.Cell>{item.status}</Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
-        </Stack>
-      </Box>
+              <Button type="submit" colorPalette="red" size="lg" loading={loading}>Submit Request</Button>
+            </Stack>
+          </form>
+        </Box>
+      )}
+
+      {/* Request List */}
+      <Stack gap={4}>
+        <Heading size="md" color="gray.700">
+          {items.length > 0 ? `${items.length} Request${items.length !== 1 ? "s" : ""}` : "No requests yet"}
+        </Heading>
+        {items.map((item) => (
+          <RequestCard key={item.id} item={item} />
+        ))}
+      </Stack>
     </Stack>
   );
 }

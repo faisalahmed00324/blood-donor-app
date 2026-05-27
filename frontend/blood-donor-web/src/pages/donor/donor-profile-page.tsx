@@ -1,40 +1,42 @@
 import {
-  Alert,
   Box,
   Button,
   Field,
+  Flex,
   Heading,
   Input,
   NativeSelect,
+  Separator,
   Stack,
   Switch,
-  Text
+  Text,
 } from "@chakra-ui/react";
-import { useState } from "react";
-import { updateAvailability, upsertMyProfile } from "../../api/donors";
+import { useEffect, useState } from "react";
+import { getMyProfile, updateAvailability, upsertMyProfile } from "../../api/donors";
 import { useAuth } from "../../context/auth-context";
+import { useToast } from "../../context/toast-context";
 
 const bloodGroupOptions = [
-  { label: "A-", value: 1 },
+  { label: "A−", value: 1 },
   { label: "A+", value: 2 },
-  { label: "B-", value: 3 },
+  { label: "B−", value: 3 },
   { label: "B+", value: 4 },
-  { label: "AB-", value: 5 },
+  { label: "AB−", value: 5 },
   { label: "AB+", value: 6 },
-  { label: "O-", value: 7 },
-  { label: "O+", value: 8 }
+  { label: "O−", value: 7 },
+  { label: "O+", value: 8 },
 ];
 
 const availabilityOptions = [
   { label: "Available", value: 1 },
-  { label: "Temporarily Unavailable", value: 2 }
+  { label: "Temporarily Unavailable", value: 2 },
 ];
 
 export function DonorProfilePage() {
   const { auth } = useAuth();
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const [bloodGroup, setBloodGroup] = useState("8");
   const [dateOfBirth, setDateOfBirth] = useState("1995-01-01");
@@ -42,18 +44,53 @@ export function DonorProfilePage() {
   const [latitude, setLatitude] = useState("23.8103");
   const [longitude, setLongitude] = useState("90.4125");
   const [city, setCity] = useState("Dhaka");
-  const [area, setArea] = useState("Uttara");
+  const [area, setArea] = useState("");
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
   const [availability, setAvailability] = useState("1");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  if (!auth) {
-    return <Text color="gray.600">Please login first.</Text>;
-  }
+  useEffect(() => {
+    if (!auth) return;
+    void (async () => {
+      try {
+        const profile = await getMyProfile(auth.accessToken);
+        setBloodGroup(String(profile.bloodGroup));
+        setDateOfBirth(profile.dateOfBirth.split("T")[0]);
+        setWeightKg(String(profile.weightKg));
+        setLatitude(String(profile.latitude));
+        setLongitude(String(profile.longitude));
+        setCity(profile.city);
+        setArea(profile.area ?? "");
+        setIsPhoneVisible(profile.isPhoneVisible);
+        setAvailability(String(profile.availabilityStatus));
+      } catch {
+        // Profile might not exist yet - that's OK
+      } finally {
+        setLoadingProfile(false);
+      }
+    })();
+  }, [auth]);
+
+  if (!auth) return null;
+
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (!city.trim()) e.city = "City is required.";
+    if (!dateOfBirth) e.dateOfBirth = "Date of birth is required.";
+    if (Number(weightKg) < 50) e.weightKg = "Minimum weight is 50 kg.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const clearError = (field: string) =>
+    setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setMessage(null);
-    setError(null);
+    if (!validate()) {
+      toast.warning("Validation error", "Please fix the highlighted fields.");
+      return;
+    }
     setLoading(true);
     try {
       await upsertMyProfile(auth.accessToken, {
@@ -63,98 +100,152 @@ export function DonorProfilePage() {
         latitude: Number(latitude),
         longitude: Number(longitude),
         city,
-        area,
-        isPhoneVisible
+        area: area || undefined,
+        isPhoneVisible,
       });
-
       await updateAvailability(auth.accessToken, {
-        availabilityStatus: Number(availability)
+        availabilityStatus: Number(availability),
       });
-
-      setMessage("Donor profile saved successfully.");
+      toast.success("Profile saved", "Your donor profile has been updated successfully.");
     } catch {
-      setError("Failed to save donor profile.");
+      toast.error("Save failed", "Could not save your donor profile. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadingProfile) {
+    return (
+      <Flex justify="center" py={20}>
+        <Text color="gray.500">Loading profile...</Text>
+      </Flex>
+    );
+  }
+
   return (
-    <Box bg="white" p={6} borderRadius="lg" borderWidth="1px">
-      <form onSubmit={onSubmit}>
-        <Stack gap={5}>
-          <Heading size="lg">Donor profile</Heading>
-          <Text color="gray.600">Set your blood type, location, and availability.</Text>
+    <Stack gap={6}>
+      <Box>
+        <Heading size="2xl" color="gray.800" mb={2}>Donor Profile</Heading>
+        <Text color="gray.500">Manage your blood type, location, and availability settings.</Text>
+      </Box>
 
-          {message ? <Alert.Root status="success"><Alert.Indicator /><Alert.Content>{message}</Alert.Content></Alert.Root> : null}
-          {error ? <Alert.Root status="error"><Alert.Indicator /><Alert.Content>{error}</Alert.Content></Alert.Root> : null}
+      <Box bg="white" p={8} borderRadius="xl" borderWidth="1px" shadow="sm">
+        <form onSubmit={onSubmit}>
+          <Stack gap={8}>
+            {/* Blood Info Section */}
+            <Box>
+              <Heading size="md" color="gray.700" mb={4}>Blood Information</Heading>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Blood Group</Field.Label>
+                    <NativeSelect.Root size="lg">
+                      <NativeSelect.Field value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)}>
+                        {bloodGroupOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Availability</Field.Label>
+                    <NativeSelect.Root size="lg">
+                      <NativeSelect.Field value={availability} onChange={(e) => setAvailability(e.target.value)}>
+                        {availabilityOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+                </Box>
+              </Flex>
+            </Box>
 
-          <Field.Root>
-            <Field.Label>Blood group</Field.Label>
-            <NativeSelect.Root>
-              <NativeSelect.Field value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)}>
-                {bloodGroupOptions.map((option) => (
-                  <option key={option.label} value={option.value}>{option.label}</option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
+            <Separator />
 
-          <Field.Root>
-            <Field.Label>Date of birth</Field.Label>
-            <Input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} required />
-          </Field.Root>
+            {/* Personal Info Section */}
+            <Box>
+              <Heading size="md" color="gray.700" mb={4}>Personal Details</Heading>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root invalid={!!errors.dateOfBirth}>
+                    <Field.Label fontWeight="medium">Date of Birth</Field.Label>
+                    <Input type="date" value={dateOfBirth} onChange={(e) => { setDateOfBirth(e.target.value); clearError("dateOfBirth"); }} size="lg" />
+                    {errors.dateOfBirth && <Field.ErrorText>{errors.dateOfBirth}</Field.ErrorText>}
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root invalid={!!errors.weightKg}>
+                    <Field.Label fontWeight="medium">Weight (kg)</Field.Label>
+                    <Input type="number" min={50} value={weightKg} onChange={(e) => { setWeightKg(e.target.value); clearError("weightKg"); }} size="lg" />
+                    {errors.weightKg && <Field.ErrorText>{errors.weightKg}</Field.ErrorText>}
+                  </Field.Root>
+                </Box>
+              </Flex>
+            </Box>
 
-          <Field.Root>
-            <Field.Label>Weight (kg)</Field.Label>
-            <Input type="number" min={50} value={weightKg} onChange={(e) => setWeightKg(e.target.value)} required />
-          </Field.Root>
+            <Separator />
 
-          <Field.Root>
-            <Field.Label>City</Field.Label>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} required />
-          </Field.Root>
+            {/* Location Section */}
+            <Box>
+              <Heading size="md" color="gray.700" mb={4}>Location</Heading>
+              <Flex gap={4} wrap="wrap">
+                <Box flex="1" minW="200px">
+                  <Field.Root invalid={!!errors.city}>
+                    <Field.Label fontWeight="medium">City</Field.Label>
+                    <Input value={city} onChange={(e) => { setCity(e.target.value); clearError("city"); }} size="lg" />
+                    {errors.city && <Field.ErrorText>{errors.city}</Field.ErrorText>}
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Area</Field.Label>
+                    <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Optional" size="lg" />
+                  </Field.Root>
+                </Box>
+              </Flex>
+              <Flex gap={4} wrap="wrap" mt={4}>
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Latitude</Field.Label>
+                    <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} size="lg" />
+                  </Field.Root>
+                </Box>
+                <Box flex="1" minW="200px">
+                  <Field.Root>
+                    <Field.Label fontWeight="medium">Longitude</Field.Label>
+                    <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} size="lg" />
+                  </Field.Root>
+                </Box>
+              </Flex>
+            </Box>
 
-          <Field.Root>
-            <Field.Label>Area</Field.Label>
-            <Input value={area} onChange={(e) => setArea(e.target.value)} />
-          </Field.Root>
+            <Separator />
 
-          <Field.Root>
-            <Field.Label>Latitude</Field.Label>
-            <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} required />
-          </Field.Root>
+            {/* Privacy Section */}
+            <Box>
+              <Heading size="md" color="gray.700" mb={4}>Privacy</Heading>
+              <Field.Root>
+                <Flex align="center" gap={3}>
+                  <Switch.Root checked={isPhoneVisible} onCheckedChange={(e) => setIsPhoneVisible(!!e.checked)}>
+                    <Switch.HiddenInput />
+                    <Switch.Control />
+                    <Switch.Label>{isPhoneVisible ? "Phone visible to matched seekers" : "Phone hidden"}</Switch.Label>
+                  </Switch.Root>
+                </Flex>
+              </Field.Root>
+            </Box>
 
-          <Field.Root>
-            <Field.Label>Longitude</Field.Label>
-            <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} required />
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Availability</Field.Label>
-            <NativeSelect.Root>
-              <NativeSelect.Field value={availability} onChange={(e) => setAvailability(e.target.value)}>
-                {availabilityOptions.map((option) => (
-                  <option key={option.label} value={option.value}>{option.label}</option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Show phone number after match acceptance</Field.Label>
-            <Switch.Root checked={isPhoneVisible} onCheckedChange={(e) => setIsPhoneVisible(!!e.checked)}>
-              <Switch.HiddenInput />
-              <Switch.Control />
-              <Switch.Label>{isPhoneVisible ? "Visible" : "Hidden"}</Switch.Label>
-            </Switch.Root>
-          </Field.Root>
-
-          <Button type="submit" colorPalette="green" loading={loading}>Save profile</Button>
-        </Stack>
-      </form>
-    </Box>
+            <Button type="submit" colorPalette="red" size="lg" loading={loading}>
+              Save Profile
+            </Button>
+          </Stack>
+        </form>
+      </Box>
+    </Stack>
   );
 }
