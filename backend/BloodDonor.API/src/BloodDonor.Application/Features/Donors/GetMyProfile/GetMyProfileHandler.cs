@@ -1,10 +1,11 @@
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace BloodDonor.Application.Features.Donors.GetMyProfile;
 
-public sealed class GetMyProfileHandler(IAppDbContext dbContext)
+public sealed class GetMyProfileHandler(IAppDbContext dbContext) : IRequestHandler<GetMyProfileQuery, DonorProfileResponse>
 {
     public async Task<Result<DonorProfileResponse>> Handle(GetMyProfileQuery query, CancellationToken cancellationToken)
     {

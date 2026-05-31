@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using BloodDonor.Application.Features.Notifications.CreateInAppNotification;
 using BloodDonor.Application.Features.Notifications.ListMyNotifications;
+using BloodDonor.Application.Messaging;
 
 namespace BloodDonor.Api.Endpoints.Notifications;
 
@@ -14,7 +15,7 @@ public static class NotificationEndpoints
             HttpContext httpContext,
             int? page,
             int? pageSize,
-            ListMyNotificationsHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(httpContext.User);
@@ -23,16 +24,16 @@ public static class NotificationEndpoints
                 return Results.Unauthorized();
             }
 
-            var result = await handler.Handle(new ListMyNotificationsQuery(userId.Value, page ?? 1, pageSize ?? 20), ct);
+            var result = await dispatcher.Send(new ListMyNotificationsQuery(userId.Value, page ?? 1, pageSize ?? 20), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
         group.MapPost("/", async (
             CreateNotificationBody body,
-            CreateInAppNotificationHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
-            var result = await handler.Handle(
+            var result = await dispatcher.Send(
                 new CreateInAppNotificationCommand(body.UserId, body.Type, body.Title, body.Message, body.ActionUrl),
                 ct);
 

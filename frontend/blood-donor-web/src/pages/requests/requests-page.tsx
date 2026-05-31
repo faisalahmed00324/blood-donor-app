@@ -1,7 +1,7 @@
 import { Badge, Box, Button, Field, Flex, Heading, Input, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { LocationPicker } from "../../components/location/location-picker";
-import { createRequest, listRequests, type BloodRequestDto } from "../../api/requests";
+import { createRequest, listRequests, respondToRequest, updateRequestStatus, type BloodRequestDto } from "../../api/requests";
 import { useAuth } from "../../context/auth-context";
 import { useToast } from "../../context/toast-context";
 
@@ -17,7 +17,19 @@ const urgencyLabels: Record<number, string> = {
   1: "Critical", 2: "Urgent", 3: "Normal",
 };
 
-function RequestCard({ item }: { item: BloodRequestDto }) {
+const responseStatusLabels: Record<number, string> = {
+  2: "Accepted",
+  3: "Declined",
+  4: "Completed",
+  5: "Withdrawn",
+};
+
+function RequestCard({ item, isMine, onUpdateStatus, onRespond }: {
+  item: BloodRequestDto;
+  isMine: boolean;
+  onUpdateStatus: (requestId: string, status: number) => Promise<void>;
+  onRespond: (requestId: string, status: number) => Promise<void>;
+}) {
   const urgencyColor = item.urgencyLevel === 1 ? "red" : item.urgencyLevel === 2 ? "orange" : "green";
   return (
     <Box bg="white" p={5} borderRadius="xl" borderWidth="1px" shadow="sm">
@@ -45,9 +57,40 @@ function RequestCard({ item }: { item: BloodRequestDto }) {
           <Text fontWeight="semibold">{new Date(item.requiredByDate).toLocaleDateString()}</Text>
         </Box>
         <Box>
+          <Text fontSize="xs" color="gray.500">Requester</Text>
+          <Text fontWeight="semibold">{item.seekerName}</Text>
+        </Box>
+        <Box>
           <Text fontSize="xs" color="gray.500">Contact</Text>
           <Text fontWeight="semibold">{item.contactPersonName}</Text>
+          <Text fontSize="sm" color="gray.500">{item.contactPersonPhone}</Text>
         </Box>
+      </Flex>
+      <Text fontSize="sm" color="gray.500" mt={3}>Accepted donors: {item.acceptedDonorCount}</Text>
+      {item.responses.length > 0 ? (
+        <Stack gap={2} mt={3}>
+          {item.responses.map((response) => (
+            <Box key={response.id} borderWidth="1px" borderRadius="md" p={3}>
+              <Text fontWeight="semibold">{response.donorName}</Text>
+              <Text fontSize="sm" color="gray.500">{responseStatusLabels[response.status] ?? "Unknown"}</Text>
+              {response.donorPhone ? <Text fontSize="sm" color="gray.500">{response.donorPhone}</Text> : null}
+            </Box>
+          ))}
+        </Stack>
+      ) : null}
+      <Flex gap={2} mt={4} wrap="wrap">
+        {isMine ? (
+          <>
+            {item.status !== 5 ? <Button size="sm" variant="outline" onClick={() => void onUpdateStatus(item.id, 5)}>Cancel Request</Button> : null}
+            {item.status !== 3 ? <Button size="sm" colorPalette="green" onClick={() => void onUpdateStatus(item.id, 3)}>Mark Fulfilled</Button> : null}
+          </>
+        ) : (
+          <>
+            {item.myResponseStatus !== 2 ? <Button size="sm" colorPalette="red" onClick={() => void onRespond(item.id, 2)}>Accept</Button> : null}
+            {item.myResponseStatus !== 3 ? <Button size="sm" variant="outline" onClick={() => void onRespond(item.id, 3)}>Decline</Button> : null}
+            {item.myResponseStatus === 2 ? <Button size="sm" variant="outline" onClick={() => void onRespond(item.id, 5)}>Withdraw</Button> : null}
+          </>
+        )}
       </Flex>
     </Box>
   );
@@ -56,7 +99,8 @@ function RequestCard({ item }: { item: BloodRequestDto }) {
 export function RequestsPage() {
   const { auth } = useAuth();
   const toast = useToast();
-  const [items, setItems] = useState<BloodRequestDto[]>([]);
+  const [myItems, setMyItems] = useState<BloodRequestDto[]>([]);
+  const [availableItems, setAvailableItems] = useState<BloodRequestDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -77,8 +121,12 @@ export function RequestsPage() {
     if (!auth) return;
     void (async () => {
       try {
-        const result = await listRequests(auth);
-        setItems(result.items);
+        const [mine, available] = await Promise.all([
+          listRequests(auth, { mineOnly: true }),
+          listRequests(auth, { availableForMe: true }),
+        ]);
+        setMyItems(mine.items);
+        setAvailableItems(available.items);
       } catch {
         toast.error("Load failed", "Could not load requests.");
       }
@@ -124,14 +172,43 @@ export function RequestsPage() {
         contactPersonPhone,
         requiredByDate,
       });
-      const result = await listRequests(auth);
-      setItems(result.items);
+      const mine = await listRequests(auth, { mineOnly: true });
+      setMyItems(mine.items);
       toast.success("Request created", "Your blood request has been submitted.");
       setShowForm(false);
     } catch {
       toast.error("Failed", "Could not create the request. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshRequests = async () => {
+    const [mine, available] = await Promise.all([
+      listRequests(auth, { mineOnly: true }),
+      listRequests(auth, { availableForMe: true }),
+    ]);
+    setMyItems(mine.items);
+    setAvailableItems(available.items);
+  };
+
+  const handleUpdateStatus = async (requestId: string, status: number) => {
+    try {
+      await updateRequestStatus(auth, requestId, { status });
+      await refreshRequests();
+      toast.success("Request updated", "The request status has been updated.");
+    } catch {
+      toast.error("Update failed", "Could not update the request status.");
+    }
+  };
+
+  const handleRespond = async (requestId: string, status: number) => {
+    try {
+      await respondToRequest(auth, requestId, { status });
+      await refreshRequests();
+      toast.success("Response saved", "Your response has been updated.");
+    } catch {
+      toast.error("Response failed", "Could not save your response.");
     }
   };
 
@@ -262,10 +339,19 @@ export function RequestsPage() {
       {/* Request List */}
       <Stack gap={4}>
         <Heading size="md" color="gray.700">
-          {items.length > 0 ? `${items.length} Request${items.length !== 1 ? "s" : ""}` : "No requests yet"}
+          {myItems.length > 0 ? `${myItems.length} My Request${myItems.length !== 1 ? "s" : ""}` : "No requests yet"}
         </Heading>
-        {items.map((item) => (
-          <RequestCard key={item.id} item={item} />
+        {myItems.map((item) => (
+          <RequestCard key={item.id} item={item} isMine onUpdateStatus={handleUpdateStatus} onRespond={handleRespond} />
+        ))}
+      </Stack>
+
+      <Stack gap={4}>
+        <Heading size="md" color="gray.700">
+          {availableItems.length > 0 ? `${availableItems.length} Open Request${availableItems.length !== 1 ? "s" : ""} For Donors` : "No donor requests available"}
+        </Heading>
+        {availableItems.map((item) => (
+          <RequestCard key={item.id} item={item} isMine={false} onUpdateStatus={handleUpdateStatus} onRespond={handleRespond} />
         ))}
       </Stack>
     </Stack>

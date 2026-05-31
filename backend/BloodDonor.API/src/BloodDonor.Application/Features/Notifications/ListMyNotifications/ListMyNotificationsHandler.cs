@@ -1,10 +1,11 @@
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 namespace BloodDonor.Application.Features.Notifications.ListMyNotifications;
 
-public sealed class ListMyNotificationsHandler(IAppDbContext dbContext)
+public sealed class ListMyNotificationsHandler(IAppDbContext dbContext) : IRequestHandler<ListMyNotificationsQuery, PagedResult<NotificationDto>>
 {
     public async Task<Result<PagedResult<NotificationDto>>> Handle(ListMyNotificationsQuery query, CancellationToken cancellationToken)
     {

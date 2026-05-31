@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using BloodDonor.Application.Features.Donors.GetMyProfile;
+using BloodDonor.Application.Features.Donors.RequestDonorContact;
 using BloodDonor.Application.Features.Donors.UpsertMyProfile;
 using BloodDonor.Application.Features.Donors.UpdateAvailability;
+using BloodDonor.Application.Messaging;
 
 namespace BloodDonor.Api.Endpoints.Donors;
 
@@ -11,7 +13,7 @@ public static class DonorEndpoints
     {
         var group = app.MapGroup("/api/donors").WithTags("Donors").RequireAuthorization();
 
-        group.MapGet("/me", async (HttpContext httpContext, GetMyProfileHandler handler, CancellationToken ct) =>
+        group.MapGet("/me", async (HttpContext httpContext, IApplicationDispatcher dispatcher, CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(httpContext.User);
             if (userId is null)
@@ -19,14 +21,14 @@ public static class DonorEndpoints
                 return Results.Unauthorized();
             }
 
-            var result = await handler.Handle(new GetMyProfileQuery(userId.Value), ct);
+            var result = await dispatcher.Send(new GetMyProfileQuery(userId.Value), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.NotFound(result.Error);
         });
 
         group.MapPut("/me", async (
             HttpContext httpContext,
             UpsertMyProfileRequest request,
-            UpsertMyProfileHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(httpContext.User);
@@ -46,14 +48,14 @@ public static class DonorEndpoints
                 request.Area,
                 request.IsPhoneVisible);
 
-            var result = await handler.Handle(command, ct);
+            var result = await dispatcher.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
         group.MapPut("/me/availability", async (
             HttpContext httpContext,
             UpdateAvailabilityRequest request,
-            UpdateAvailabilityHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(httpContext.User);
@@ -62,8 +64,25 @@ public static class DonorEndpoints
                 return Results.Unauthorized();
             }
 
-            var result = await handler.Handle(new UpdateAvailabilityCommand(userId.Value, request.AvailabilityStatus), ct);
+            var result = await dispatcher.Send(new UpdateAvailabilityCommand(userId.Value, request.AvailabilityStatus), ct);
             return result.IsSuccess ? Results.NoContent() : Results.BadRequest(result.Error);
+        });
+
+        group.MapPost("/{donorUserId:guid}/contact-request", async (
+            HttpContext httpContext,
+            Guid donorUserId,
+            RequestDonorContactBody body,
+            IApplicationDispatcher dispatcher,
+            CancellationToken ct) =>
+        {
+            var userId = GetCurrentUserId(httpContext.User);
+            if (userId is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await dispatcher.Send(new RequestDonorContactCommand(donorUserId, userId.Value, body.Message), ct);
+            return result.IsSuccess ? Results.Ok() : Results.BadRequest(result.Error);
         });
 
         return app;

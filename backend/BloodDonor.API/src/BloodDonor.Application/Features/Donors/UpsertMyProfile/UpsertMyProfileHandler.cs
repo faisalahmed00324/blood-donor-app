@@ -2,6 +2,7 @@ using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
 using BloodDonor.Application.Features.Auth;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Entities;
 using BloodDonor.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace BloodDonor.Application.Features.Donors.UpsertMyProfile;
 public sealed class UpsertMyProfileHandler(
     IAppDbContext dbContext,
     IDateTimeProvider dateTimeProvider)
+    : IRequestHandler<UpsertMyProfileCommand, DonorProfileResponse>
 {
     public async Task<Result<DonorProfileResponse>> Handle(UpsertMyProfileCommand command, CancellationToken cancellationToken)
     {

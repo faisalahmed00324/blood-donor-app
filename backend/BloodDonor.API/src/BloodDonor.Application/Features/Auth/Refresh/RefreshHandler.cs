@@ -2,6 +2,7 @@ using BloodDonor.Application.Abstractions.Auth;
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,7 @@ public sealed class RefreshHandler(
     IAppDbContext dbContext,
     IJwtTokenService jwtTokenService,
     IDateTimeProvider dateTimeProvider)
+    : IRequestHandler<RefreshCommand, AuthTokensResponse>
 {
     private const int AccessTokenMinutes = 15;
     private const int RefreshTokenDays = 7;

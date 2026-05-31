@@ -18,6 +18,20 @@ type CreateRequestPayload = {
   prescriptionUrl?: string;
 };
 
+type ListRequestsOptions = {
+  mineOnly?: boolean;
+  availableForMe?: boolean;
+};
+
+type UpdateRequestStatusPayload = {
+  status: number;
+};
+
+type RespondToRequestPayload = {
+  status: number;
+  notes?: string;
+};
+
 function authHeaders(auth: AuthResponse) {
   return {
     "Content-Type": "application/json",
@@ -39,8 +53,15 @@ export async function createRequest(auth: AuthResponse, payload: CreateRequestPa
   return (await response.json()) as BloodRequestDto;
 }
 
-export async function listRequests(auth: AuthResponse): Promise<PagedResult<BloodRequestDto>> {
-  const response = await fetch(`${API_BASE_URL}/api/requests?page=1&pageSize=20`, {
+export async function listRequests(auth: AuthResponse, options?: ListRequestsOptions): Promise<PagedResult<BloodRequestDto>> {
+  const params = new URLSearchParams({
+    page: "1",
+    pageSize: "20",
+    mineOnly: String(options?.mineOnly ?? false),
+    availableForMe: String(options?.availableForMe ?? false),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/requests?${params.toString()}`, {
     headers: authHeaders(auth),
   });
 
@@ -49,4 +70,32 @@ export async function listRequests(auth: AuthResponse): Promise<PagedResult<Bloo
   }
 
   return (await response.json()) as PagedResult<BloodRequestDto>;
+}
+
+export async function updateRequestStatus(auth: AuthResponse, requestId: string, payload: UpdateRequestStatusPayload): Promise<BloodRequestDto> {
+  const response = await fetch(`${API_BASE_URL}/api/requests/${requestId}`, {
+    method: "PUT",
+    headers: authHeaders(auth),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update request status.");
+  }
+
+  return (await response.json()) as BloodRequestDto;
+}
+
+export async function respondToRequest(auth: AuthResponse, requestId: string, payload: RespondToRequestPayload) {
+  const response = await fetch(`${API_BASE_URL}/api/requests/${requestId}/respond`, {
+    method: "POST",
+    headers: authHeaders(auth),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to respond to request.");
+  }
+
+  return await response.json();
 }

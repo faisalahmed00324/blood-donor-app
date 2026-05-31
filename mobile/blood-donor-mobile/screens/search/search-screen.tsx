@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { requestDonorContact } from "@/api/donor-contact";
 import { searchDonors } from "@/api/search";
 import type { DonorSearchResult } from "@/api/types";
 import { ScreenShell } from "@/components/layout/screen-shell";
@@ -9,14 +10,22 @@ import { availabilityLabels, bloodGroupOptions } from "@/constants/options";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/context/toast-context";
 
-function DonorCard({ donor }: { donor: DonorSearchResult }) {
+function DonorCard({ donor, onRequestContact }: { donor: DonorSearchResult; onRequestContact: (donor: DonorSearchResult) => Promise<void> }) {
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{bloodGroupOptions.find((option) => option.value === donor.bloodGroup)?.label ?? "?"}</Text>
+      <Text style={styles.meta}>{donor.fullName}</Text>
       <Text style={styles.meta}>{donor.city}{donor.area ? `, ${donor.area}` : ""}</Text>
       <Text style={styles.meta}>{donor.distanceKm.toFixed(1)} km away</Text>
       <Text style={styles.meta}>{availabilityLabels[donor.availabilityStatus] ?? "Unknown"}</Text>
       <Text style={styles.meta}>Total donations: {donor.totalDonations}</Text>
+      {donor.phone ? (
+        <Text style={styles.meta}>Phone: {donor.phone}</Text>
+      ) : (
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => void onRequestContact(donor)}>
+          <Text style={styles.secondaryButtonText}>Request Contact</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -56,6 +65,15 @@ export function SearchScreen() {
     }
   };
 
+  const handleRequestContact = async (donor: DonorSearchResult) => {
+    try {
+      await requestDonorContact(auth, donor.userId, `Please contact me about donating ${bloodGroupOptions.find((option) => option.value === donor.bloodGroup)?.label ?? "blood"}.`);
+      toast.success("Contact request sent", `The donor ${donor.fullName} has been notified.`);
+    } catch {
+      toast.error("Request failed", "Could not notify the donor. Please try again.");
+    }
+  };
+
   return (
     <ScreenShell title="Find Donors" subtitle="Search for compatible blood donors in your area.">
       <View style={styles.card}>
@@ -71,7 +89,7 @@ export function SearchScreen() {
         <Text style={styles.sectionTitle}>{items.length > 0 ? `${items.length} Donor${items.length !== 1 ? "s" : ""} Found` : "No donors found"}</Text>
         <View style={styles.listGap}>
           {items.map((item) => (
-            <DonorCard key={item.userId} donor={item} />
+            <DonorCard key={item.userId} donor={item} onRequestContact={handleRequestContact} />
           ))}
         </View>
       </View>
@@ -96,6 +114,18 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "700",
     fontSize: 16,
+  },
+  secondaryButton: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#dc2626",
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  secondaryButtonText: {
+    color: "#dc2626",
+    fontWeight: "700",
   },
   section: {
     gap: 12,

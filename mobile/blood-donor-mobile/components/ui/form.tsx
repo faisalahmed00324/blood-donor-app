@@ -15,8 +15,6 @@ export function FormField({ label, error, style, ...props }: FormFieldProps) {
   );
 }
 
-export const formStyles = styles;
-
 const styles = StyleSheet.create({
   field: {
     gap: 8,
@@ -41,3 +39,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
+
+export const formStyles = styles;

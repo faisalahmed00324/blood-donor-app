@@ -13,6 +13,9 @@ const DonorProfilePage = lazy(() => import("./pages/donor/donor-profile-page").t
 const RequestsPage = lazy(() => import("./pages/requests/requests-page").then((m) => ({ default: m.RequestsPage })));
 const SearchPage = lazy(() => import("./pages/search/search-page").then((m) => ({ default: m.SearchPage })));
 const NotificationsPage = lazy(() => import("./pages/notifications/notifications-page").then((m) => ({ default: m.NotificationsPage })));
+const AdminUsersPage = lazy(() => import("./pages/admin/admin-users-page").then((m) => ({ default: m.AdminUsersPage })));
+const AdminRequestsPage = lazy(() => import("./pages/admin/admin-requests-page").then((m) => ({ default: m.AdminRequestsPage })));
+const AdminDonorsPage = lazy(() => import("./pages/admin/admin-donors-page").then((m) => ({ default: m.AdminDonorsPage })));
 
 function PageLoader() {
   return (
@@ -53,6 +56,9 @@ export default function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/admin/users" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminUsersPage /></ProtectedRoute>} />
+                <Route path="/admin/requests" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminRequestsPage /></ProtectedRoute>} />
+                <Route path="/admin/donors" element={<ProtectedRoute allowedRoles={["Admin"]}><AdminDonorsPage /></ProtectedRoute>} />
               </Route>
 
               {/* Default redirect */}

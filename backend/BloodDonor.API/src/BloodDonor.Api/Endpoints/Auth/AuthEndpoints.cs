@@ -1,3 +1,4 @@
+using BloodDonor.Application.Messaging;
 using BloodDonor.Application.Features.Auth.Login;
 using BloodDonor.Application.Features.Auth.Refresh;
 using BloodDonor.Application.Features.Auth.Register;
@@ -12,10 +13,10 @@ public static class AuthEndpoints
 
         group.MapPost("/register", async (
                 RegisterRequest request,
-                RegisterHandler handler,
+                IApplicationDispatcher dispatcher,
                 CancellationToken ct) =>
             {
-                var result = await handler.Handle(
+                var result = await dispatcher.Send(
                     new RegisterCommand(request.Email, request.Password, request.FullName, request.Phone, request.Role),
                     ct);
 
@@ -27,10 +28,10 @@ public static class AuthEndpoints
 
         group.MapPost("/login", async (
                 LoginRequest request,
-                LoginHandler handler,
+                IApplicationDispatcher dispatcher,
                 CancellationToken ct) =>
             {
-                var result = await handler.Handle(new LoginCommand(request.Email, request.Password), ct);
+                var result = await dispatcher.Send(new LoginCommand(request.Email, request.Password), ct);
                 return result.IsSuccess
                     ? Results.Ok(result.Value)
                     : Results.BadRequest(result.Error);
@@ -39,10 +40,10 @@ public static class AuthEndpoints
 
         group.MapPost("/refresh", async (
                 RefreshRequest request,
-                RefreshHandler handler,
+                IApplicationDispatcher dispatcher,
                 CancellationToken ct) =>
             {
-                var result = await handler.Handle(new RefreshCommand(request.RefreshToken), ct);
+                var result = await dispatcher.Send(new RefreshCommand(request.RefreshToken), ct);
                 return result.IsSuccess
                     ? Results.Ok(result.Value)
                     : Results.BadRequest(result.Error);

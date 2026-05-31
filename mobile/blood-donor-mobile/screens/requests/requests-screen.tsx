@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { createRequest, listRequests } from "@/api/requests";
+import { createRequest, listRequests, respondToRequest, updateRequestStatus } from "@/api/requests";
 import type { BloodRequestDto } from "@/api/types";
 import { ScreenShell } from "@/components/layout/screen-shell";
 import { LocationPicker } from "@/components/location/location-picker";
@@ -9,16 +9,71 @@ import { bloodGroupOptions, requestStatusLabels, urgencyLabels } from "@/constan
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/context/toast-context";
 
-function RequestCard({ item }: { item: BloodRequestDto }) {
+const responseStatusLabels: Record<number, string> = {
+  2: "Accepted",
+  3: "Declined",
+  4: "Completed",
+  5: "Withdrawn",
+};
+
+function RequestCard({ item, isMine, onUpdateStatus, onRespond }: {
+  item: BloodRequestDto;
+  isMine: boolean;
+  onUpdateStatus: (requestId: string, status: number) => Promise<void>;
+  onRespond: (requestId: string, status: number) => Promise<void>;
+}) {
   return (
     <View style={styles.requestCard}>
       <Text style={styles.requestTitle}>{item.hospitalName}</Text>
       <Text style={styles.requestAddress}>{item.hospitalAddress}</Text>
       <Text style={styles.requestMeta}>{urgencyLabels[item.urgencyLevel] ?? "Unknown"} · {requestStatusLabels[item.status] ?? "Unknown"}</Text>
+      <Text style={styles.requestMeta}>Requester: {item.seekerName}</Text>
       <Text style={styles.requestMeta}>Blood Group: {bloodGroupOptions.find((option) => option.value === item.bloodGroup)?.label ?? "?"}</Text>
       <Text style={styles.requestMeta}>Units: {item.unitsFulfilled}/{item.unitsNeeded}</Text>
       <Text style={styles.requestMeta}>Required by: {new Date(item.requiredByDate).toLocaleDateString()}</Text>
-      <Text style={styles.requestMeta}>Contact: {item.contactPersonName}</Text>
+      <Text style={styles.requestMeta}>Contact: {item.contactPersonName} ({item.contactPersonPhone})</Text>
+      <Text style={styles.requestMeta}>Accepted donors: {item.acceptedDonorCount}</Text>
+      {item.responses.map((response) => (
+        <View key={response.id} style={styles.responseCard}>
+          <Text style={styles.responseTitle}>{response.donorName}</Text>
+          <Text style={styles.requestMeta}>{responseStatusLabels[response.status] ?? "Unknown"}</Text>
+          {response.donorPhone ? <Text style={styles.requestMeta}>{response.donorPhone}</Text> : null}
+        </View>
+      ))}
+      <View style={styles.actionsRow}>
+        {isMine ? (
+          <>
+            {item.status !== 5 ? (
+              <TouchableOpacity style={styles.secondaryAction} onPress={() => void onUpdateStatus(item.id, 5)}>
+                <Text style={styles.secondaryActionText}>Cancel</Text>
+              </TouchableOpacity>
+            ) : null}
+            {item.status !== 3 ? (
+              <TouchableOpacity style={styles.primaryAction} onPress={() => void onUpdateStatus(item.id, 3)}>
+                <Text style={styles.primaryActionText}>Mark Fulfilled</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {item.myResponseStatus !== 2 ? (
+              <TouchableOpacity style={styles.primaryAction} onPress={() => void onRespond(item.id, 2)}>
+                <Text style={styles.primaryActionText}>Accept</Text>
+              </TouchableOpacity>
+            ) : null}
+            {item.myResponseStatus !== 3 ? (
+              <TouchableOpacity style={styles.secondaryAction} onPress={() => void onRespond(item.id, 3)}>
+                <Text style={styles.secondaryActionText}>Decline</Text>
+              </TouchableOpacity>
+            ) : null}
+            {item.myResponseStatus === 2 ? (
+              <TouchableOpacity style={styles.secondaryAction} onPress={() => void onRespond(item.id, 5)}>
+                <Text style={styles.secondaryActionText}>Withdraw</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -26,7 +81,8 @@ function RequestCard({ item }: { item: BloodRequestDto }) {
 export function RequestsScreen() {
   const { auth } = useAuth();
   const toast = useToast();
-  const [items, setItems] = useState<BloodRequestDto[]>([]);
+  const [myItems, setMyItems] = useState<BloodRequestDto[]>([]);
+  const [availableItems, setAvailableItems] = useState<BloodRequestDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -49,8 +105,12 @@ export function RequestsScreen() {
 
     void (async () => {
       try {
-        const result = await listRequests(auth);
-        setItems(result.items);
+        const [mine, available] = await Promise.all([
+          listRequests(auth, { mineOnly: true }),
+          listRequests(auth, { availableForMe: true }),
+        ]);
+        setMyItems(mine.items);
+        setAvailableItems(available.items);
       } catch {
         toast.error("Load failed", "Could not load requests.");
       }
@@ -95,14 +155,43 @@ export function RequestsScreen() {
         contactPersonPhone,
         requiredByDate,
       });
-      const result = await listRequests(auth);
-      setItems(result.items);
+      const mine = await listRequests(auth, { mineOnly: true });
+      setMyItems(mine.items);
       setShowForm(false);
       toast.success("Request created", "Your blood request has been submitted.");
     } catch {
       toast.error("Failed", "Could not create the request. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshRequests = async () => {
+    const [mine, available] = await Promise.all([
+      listRequests(auth, { mineOnly: true }),
+      listRequests(auth, { availableForMe: true }),
+    ]);
+    setMyItems(mine.items);
+    setAvailableItems(available.items);
+  };
+
+  const handleUpdateStatus = async (requestId: string, status: number) => {
+    try {
+      await updateRequestStatus(auth, requestId, { status });
+      await refreshRequests();
+      toast.success("Request updated", "The request status has been updated.");
+    } catch {
+      toast.error("Update failed", "Could not update the request status.");
+    }
+  };
+
+  const handleRespond = async (requestId: string, status: number) => {
+    try {
+      await respondToRequest(auth, requestId, { status });
+      await refreshRequests();
+      toast.success("Response saved", "Your response has been updated.");
+    } catch {
+      toast.error("Response failed", "Could not save your response.");
     }
   };
 
@@ -134,10 +223,19 @@ export function RequestsScreen() {
       ) : null}
 
       <View style={styles.listSection}>
-        <Text style={styles.sectionTitle}>{items.length > 0 ? `${items.length} Request${items.length !== 1 ? "s" : ""}` : "No requests yet"}</Text>
+        <Text style={styles.sectionTitle}>{myItems.length > 0 ? `${myItems.length} My Request${myItems.length !== 1 ? "s" : ""}` : "No requests yet"}</Text>
         <View style={styles.listGap}>
-          {items.map((item) => (
-            <RequestCard key={item.id} item={item} />
+          {myItems.map((item) => (
+            <RequestCard key={item.id} item={item} isMine onUpdateStatus={handleUpdateStatus} onRespond={handleRespond} />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.listSection}>
+        <Text style={styles.sectionTitle}>{availableItems.length > 0 ? `${availableItems.length} Open Request${availableItems.length !== 1 ? "s" : ""} For Donors` : "No donor requests available"}</Text>
+        <View style={styles.listGap}>
+          {availableItems.map((item) => (
+            <RequestCard key={item.id} item={item} isMine={false} onUpdateStatus={handleUpdateStatus} onRespond={handleRespond} />
           ))}
         </View>
       </View>
@@ -206,5 +304,42 @@ const styles = StyleSheet.create({
   requestMeta: {
     color: "#374151",
     fontSize: 14,
+  },
+  responseCard: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: "#f9fafb",
+  },
+  responseTitle: {
+    fontWeight: "700",
+    color: "#111827",
+  },
+  actionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  primaryAction: {
+    backgroundColor: "#dc2626",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  primaryActionText: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+  secondaryAction: {
+    borderWidth: 1,
+    borderColor: "#dc2626",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  secondaryActionText: {
+    color: "#dc2626",
+    fontWeight: "700",
   },
 });

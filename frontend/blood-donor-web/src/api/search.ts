@@ -4,12 +4,15 @@ import { API_BASE_URL } from "./config";
 
 export type DonorSearchResult = {
   userId: string;
+  fullName: string;
   bloodGroup: number;
   city: string;
   area?: string;
   latitude: number;
   longitude: number;
   availabilityStatus: number;
+  isPhoneVisible: boolean;
+  phone?: string;
   totalDonations: number;
   distanceKm: number;
 };

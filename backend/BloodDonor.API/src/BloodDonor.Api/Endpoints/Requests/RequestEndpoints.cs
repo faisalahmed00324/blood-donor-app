@@ -3,6 +3,7 @@ using BloodDonor.Application.Features.Requests.CreateRequest;
 using BloodDonor.Application.Features.Requests.ListRequests;
 using BloodDonor.Application.Features.Requests.RespondToRequest;
 using BloodDonor.Application.Features.Requests.UpdateRequestStatus;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Enums;
 
 namespace BloodDonor.Api.Endpoints.Requests;
@@ -16,7 +17,7 @@ public static class RequestEndpoints
         group.MapPost("/", async (
             HttpContext httpContext,
             CreateRequestBody body,
-            CreateRequestHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(httpContext.User);
@@ -42,7 +43,7 @@ public static class RequestEndpoints
                 body.Notes,
                 body.PrescriptionUrl);
 
-            var result = await handler.Handle(command, ct);
+            var result = await dispatcher.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
@@ -51,10 +52,19 @@ public static class RequestEndpoints
             int? pageSize,
             RequestStatus? status,
             BloodGroup? bloodGroup,
-            ListRequestsHandler handler,
+            bool? mineOnly,
+            bool? availableForMe,
+            HttpContext httpContext,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
-            var result = await handler.Handle(new ListRequestsQuery(page ?? 1, pageSize ?? 20, status, bloodGroup), ct);
+            var userId = GetCurrentUserId(httpContext.User);
+            if (userId is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await dispatcher.Send(new ListRequestsQuery(userId.Value, page ?? 1, pageSize ?? 20, status, bloodGroup, mineOnly ?? false, availableForMe ?? false), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
@@ -62,7 +72,7 @@ public static class RequestEndpoints
             HttpContext httpContext,
             Guid requestId,
             UpdateRequestStatusBody body,
-            UpdateRequestStatusHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(httpContext.User);
@@ -71,7 +81,7 @@ public static class RequestEndpoints
                 return Results.Unauthorized();
             }
 
-            var result = await handler.Handle(new UpdateRequestStatusCommand(requestId, userId.Value, body.Status), ct);
+            var result = await dispatcher.Send(new UpdateRequestStatusCommand(requestId, userId.Value, body.Status), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 
@@ -79,7 +89,7 @@ public static class RequestEndpoints
             HttpContext httpContext,
             Guid requestId,
             RespondToRequestBody body,
-            RespondToRequestHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(httpContext.User);
@@ -88,7 +98,7 @@ public static class RequestEndpoints
                 return Results.Unauthorized();
             }
 
-            var result = await handler.Handle(new RespondToRequestCommand(requestId, userId.Value, body.Status, body.Notes), ct);
+            var result = await dispatcher.Send(new RespondToRequestCommand(requestId, userId.Value, body.Status, body.Notes), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
         });
 

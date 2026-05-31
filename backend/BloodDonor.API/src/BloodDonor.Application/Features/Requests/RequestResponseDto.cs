@@ -6,6 +6,8 @@ public sealed record RequestResponseDto(
     Guid Id,
     Guid RequestId,
     Guid DonorId,
+    string DonorName,
+    string? DonorPhone,
     ResponseStatus Status,
     DateTime RespondedAtUtc,
     DateTime? CompletedAtUtc,

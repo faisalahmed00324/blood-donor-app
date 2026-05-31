@@ -1,3 +1,4 @@
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Enums;
 
 namespace BloodDonor.Application.Features.Requests.CreateRequest;
@@ -18,4 +19,4 @@ public sealed record CreateRequestCommand(
     DateOnly RequiredByDate,
     string? Notes,
     string? PrescriptionUrl
-);
+) : IRequest<BloodRequestDto>;

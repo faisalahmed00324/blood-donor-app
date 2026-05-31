@@ -1,16 +1,4 @@
-using BloodDonor.Application.Features.Auth.Login;
-using BloodDonor.Application.Features.Auth.Refresh;
-using BloodDonor.Application.Features.Auth.Register;
-using BloodDonor.Application.Features.Donors.GetMyProfile;
-using BloodDonor.Application.Features.Donors.UpsertMyProfile;
-using BloodDonor.Application.Features.Donors.UpdateAvailability;
-using BloodDonor.Application.Features.Notifications.CreateInAppNotification;
-using BloodDonor.Application.Features.Notifications.ListMyNotifications;
-using BloodDonor.Application.Features.Requests.CreateRequest;
-using BloodDonor.Application.Features.Requests.ListRequests;
-using BloodDonor.Application.Features.Requests.RespondToRequest;
-using BloodDonor.Application.Features.Requests.UpdateRequestStatus;
-using BloodDonor.Application.Features.Search.SearchDonors;
+using BloodDonor.Application.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BloodDonor.Application.DependencyInjection;
@@ -19,19 +7,36 @@ public static class ApplicationServiceCollection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        services.AddScoped<RegisterHandler>();
-        services.AddScoped<LoginHandler>();
-        services.AddScoped<RefreshHandler>();
-        services.AddScoped<GetMyProfileHandler>();
-        services.AddScoped<UpsertMyProfileHandler>();
-        services.AddScoped<UpdateAvailabilityHandler>();
-        services.AddScoped<CreateRequestHandler>();
-        services.AddScoped<ListRequestsHandler>();
-        services.AddScoped<UpdateRequestStatusHandler>();
-        services.AddScoped<RespondToRequestHandler>();
-        services.AddScoped<SearchDonorsHandler>();
-        services.AddScoped<CreateInAppNotificationHandler>();
-        services.AddScoped<ListMyNotificationsHandler>();
+        services.AddScoped<IApplicationDispatcher, ApplicationDispatcher>();
+        services.AddRequestHandlers();
+
+        return services;
+    }
+
+    private static IServiceCollection AddRequestHandlers(this IServiceCollection services)
+    {
+        var handlerTypes = typeof(ApplicationServiceCollection).Assembly
+            .GetTypes()
+            .Where(type => type is { IsAbstract: false, IsInterface: false })
+            .Select(type => new
+            {
+                Implementation = type,
+                Interfaces = type.GetInterfaces()
+                    .Where(interfaceType =>
+                        interfaceType.IsGenericType
+                        && (interfaceType.GetGenericTypeDefinition() == typeof(IRequestHandler<>)
+                            || interfaceType.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)))
+                    .ToArray()
+            })
+            .Where(type => type.Interfaces.Length > 0);
+
+        foreach (var handlerType in handlerTypes)
+        {
+            foreach (var serviceType in handlerType.Interfaces)
+            {
+                services.AddScoped(serviceType, handlerType.Implementation);
+            }
+        }
 
         return services;
     }

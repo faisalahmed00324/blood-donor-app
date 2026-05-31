@@ -1,4 +1,5 @@
 using BloodDonor.Application.Features.Search.SearchDonors;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Enums;
 
 namespace BloodDonor.Api.Endpoints.Search;
@@ -16,10 +17,10 @@ public static class SearchEndpoints
             decimal radiusKm,
             int? page,
             int? pageSize,
-            SearchDonorsHandler handler,
+            IApplicationDispatcher dispatcher,
             CancellationToken ct) =>
         {
-            var result = await handler.Handle(
+            var result = await dispatcher.Send(
                 new SearchDonorsQuery(recipientBloodGroup, latitude, longitude, radiusKm, page ?? 1, pageSize ?? 20),
                 ct);
 

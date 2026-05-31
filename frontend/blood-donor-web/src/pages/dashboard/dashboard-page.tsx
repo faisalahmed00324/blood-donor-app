@@ -16,7 +16,13 @@ export function DashboardPage() {
 
   if (!auth) return null;
 
-  const roleColor = userRole === "Donor" ? "red" : userRole === "Seeker" ? "blue" : "green";
+  const roleColor = userRole === "Donor"
+    ? "red"
+    : userRole === "Seeker"
+      ? "blue"
+      : userRole === "Admin"
+        ? "purple"
+        : "green";
 
   return (
     <Stack gap={8}>
@@ -59,6 +65,19 @@ export function DashboardPage() {
           <Button asChild variant="outline" size="lg">
             <Link to="/notifications">View Notifications</Link>
           </Button>
+          {userRole === "Admin" && (
+            <>
+              <Button asChild colorPalette="purple" size="lg">
+                <Link to="/admin/users">Manage Users</Link>
+              </Button>
+              <Button asChild variant="outline" colorPalette="purple" size="lg">
+                <Link to="/admin/requests">View All Requests</Link>
+              </Button>
+              <Button asChild variant="outline" colorPalette="purple" size="lg">
+                <Link to="/admin/donors">View Donor Profiles</Link>
+              </Button>
+            </>
+          )}
         </Flex>
       </Box>
     </Stack>

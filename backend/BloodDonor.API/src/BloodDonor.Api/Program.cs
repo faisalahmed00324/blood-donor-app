@@ -1,6 +1,7 @@
 using BloodDonor.Api.DependencyInjection;
 using BloodDonor.Api.Endpoints;
 using BloodDonor.Api.Endpoints.Auth;
+using BloodDonor.Api.Endpoints.Admin;
 using BloodDonor.Api.Endpoints.Donors;
 using BloodDonor.Api.Endpoints.Notifications;
 using BloodDonor.Api.Endpoints.Requests;
@@ -44,6 +45,7 @@ if (app.Environment.IsDevelopment())
 app.MapRootEndpoints();
 app.MapHealthEndpoints();
 app.MapAuthEndpoints();
+app.MapAdminEndpoints();
 app.MapDonorEndpoints();
 app.MapRequestEndpoints();
 app.MapSearchEndpoints();

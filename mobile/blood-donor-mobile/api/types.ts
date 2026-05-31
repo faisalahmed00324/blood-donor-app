@@ -49,6 +49,7 @@ export type DonorProfileResponse = {
 export type BloodRequestDto = {
   id: string;
   seekerId: string;
+  seekerName: string;
   bloodGroup: number;
   unitsNeeded: number;
   unitsFulfilled: number;
@@ -65,9 +66,24 @@ export type BloodRequestDto = {
   notes?: string;
   prescriptionUrl?: string;
   status: number;
+  myResponseStatus?: number;
+  acceptedDonorCount: number;
+  responses: RequestResponseDto[];
   expiresAtUtc: string;
   createdAtUtc: string;
   updatedAtUtc: string;
+};
+
+export type RequestResponseDto = {
+  id: string;
+  requestId: string;
+  donorId: string;
+  donorName: string;
+  donorPhone?: string;
+  status: number;
+  respondedAtUtc: string;
+  completedAtUtc?: string;
+  notes?: string;
 };
 
 export type PagedResult<T> = {
@@ -79,12 +95,15 @@ export type PagedResult<T> = {
 
 export type DonorSearchResult = {
   userId: string;
+  fullName: string;
   bloodGroup: number;
   city: string;
   area?: string;
   latitude: number;
   longitude: number;
   availabilityStatus: number;
+  isPhoneVisible: boolean;
+  phone?: string;
   totalDonations: number;
   distanceKm: number;
 };

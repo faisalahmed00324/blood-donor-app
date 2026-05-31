@@ -18,6 +18,9 @@ const navItems: NavItem[] = [
   { label: "Requests", path: "/requests", requiresCanSeek: true },
   { label: "Search", path: "/search", requiresCanSeek: true },
   { label: "Notifications", path: "/notifications" },
+  { label: "Admin Users", path: "/admin/users", roles: ["Admin"] },
+  { label: "Admin Requests", path: "/admin/requests", roles: ["Admin"] },
+  { label: "Admin Donors", path: "/admin/donors", roles: ["Admin"] },
 ];
 
 export function AppLayout() {

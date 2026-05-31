@@ -2,6 +2,7 @@ using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
 using BloodDonor.Application.Features.Auth;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Entities;
 using BloodDonor.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace BloodDonor.Application.Features.Requests.CreateRequest;
 public sealed class CreateRequestHandler(
     IAppDbContext dbContext,
     IDateTimeProvider dateTimeProvider)
+    : IRequestHandler<CreateRequestCommand, BloodRequestDto>
 {
     public async Task<Result<BloodRequestDto>> Handle(CreateRequestCommand command, CancellationToken cancellationToken)
     {
@@ -72,6 +74,7 @@ public sealed class CreateRequestHandler(
         return new BloodRequestDto(
             request.Id,
             request.SeekerId,
+            string.Empty,
             request.BloodGroup,
             request.UnitsNeeded,
             request.UnitsFulfilled,
@@ -88,6 +91,9 @@ public sealed class CreateRequestHandler(
             request.Notes,
             request.PrescriptionUrl,
             request.Status,
+            null,
+            0,
+            [],
             request.ExpiresAtUtc,
             request.CreatedAtUtc,
             request.UpdatedAtUtc);

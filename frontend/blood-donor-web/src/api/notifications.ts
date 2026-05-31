@@ -1,4 +1,4 @@
-import type { AuthResponse } from "./types";
+import type { AuthResponse, PagedResult } from "./types";
 
 import { API_BASE_URL } from "./config";
 
@@ -11,13 +11,6 @@ export type NotificationDto = {
   isRead: boolean;
   channel: number;
   createdAtUtc: string;
-};
-
-export type PagedResult<T> = {
-  items: T[];
-  page: number;
-  pageSize: number;
-  totalCount: number;
 };
 
 export async function listNotifications(auth: AuthResponse): Promise<PagedResult<NotificationDto>> {

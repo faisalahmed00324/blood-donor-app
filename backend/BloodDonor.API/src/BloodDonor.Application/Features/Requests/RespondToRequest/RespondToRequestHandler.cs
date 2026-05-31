@@ -1,6 +1,7 @@
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Entities;
 using BloodDonor.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ namespace BloodDonor.Application.Features.Requests.RespondToRequest;
 public sealed class RespondToRequestHandler(
     IAppDbContext dbContext,
     IDateTimeProvider dateTimeProvider)
+    : IRequestHandler<RespondToRequestCommand, RequestResponseDto>
 {
     public async Task<Result<RequestResponseDto>> Handle(RespondToRequestCommand command, CancellationToken cancellationToken)
     {
@@ -18,7 +20,9 @@ public sealed class RespondToRequestHandler(
             return Result<RequestResponseDto>.Failure(new Error("Response.InvalidStatus", "Invalid response status."));
         }
 
-        var request = await dbContext.BloodRequests.FirstOrDefaultAsync(x => x.Id == command.RequestId, cancellationToken);
+        var request = await dbContext.BloodRequests
+            .Include(x => x.Seeker)
+            .FirstOrDefaultAsync(x => x.Id == command.RequestId, cancellationToken);
         if (request is null)
         {
             return Result<RequestResponseDto>.Failure(new Error("Request.NotFound", "Request not found."));
@@ -28,6 +32,17 @@ public sealed class RespondToRequestHandler(
         if (request.Status is RequestStatus.Cancelled or RequestStatus.Expired or RequestStatus.Fulfilled)
         {
             return Result<RequestResponseDto>.Failure(new Error("Request.Closed", "Request is no longer accepting responses."));
+        }
+
+        if (request.SeekerId == command.DonorId)
+        {
+            return Result<RequestResponseDto>.Failure(new Error("Response.Forbidden", "You cannot respond to your own request."));
+        }
+
+        var donor = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == command.DonorId, cancellationToken);
+        if (donor is null)
+        {
+            return Result<RequestResponseDto>.Failure(new Error("Response.DonorNotFound", "Donor not found."));
         }
 
         var now = dateTimeProvider.UtcNow;
@@ -64,6 +79,8 @@ public sealed class RespondToRequestHandler(
             response.Id,
             response.RequestId,
             response.DonorId,
+            donor.FullName,
+            donor.Phone,
             response.Status,
             response.RespondedAtUtc,
             response.CompletedAtUtc,

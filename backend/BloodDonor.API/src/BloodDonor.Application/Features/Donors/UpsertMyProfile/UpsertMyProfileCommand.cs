@@ -1,3 +1,5 @@
+using BloodDonor.Application.Features.Donors;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Enums;
 
 namespace BloodDonor.Application.Features.Donors.UpsertMyProfile;
@@ -12,4 +14,4 @@ public sealed record UpsertMyProfileCommand(
     string City,
     string? Area,
     bool IsPhoneVisible
-);
+) : IRequest<DonorProfileResponse>;

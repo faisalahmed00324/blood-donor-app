@@ -1,6 +1,7 @@
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ namespace BloodDonor.Application.Features.Donors.UpdateAvailability;
 public sealed class UpdateAvailabilityHandler(
     IAppDbContext dbContext,
     IDateTimeProvider dateTimeProvider)
+    : IRequestHandler<UpdateAvailabilityCommand>
 {
     public async Task<Result> Handle(UpdateAvailabilityCommand command, CancellationToken cancellationToken)
     {

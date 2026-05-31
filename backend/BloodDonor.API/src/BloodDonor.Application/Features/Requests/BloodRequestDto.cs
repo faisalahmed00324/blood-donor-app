@@ -5,6 +5,7 @@ namespace BloodDonor.Application.Features.Requests;
 public sealed record BloodRequestDto(
     Guid Id,
     Guid SeekerId,
+    string SeekerName,
     BloodGroup BloodGroup,
     int UnitsNeeded,
     int UnitsFulfilled,
@@ -21,6 +22,9 @@ public sealed record BloodRequestDto(
     string? Notes,
     string? PrescriptionUrl,
     RequestStatus Status,
+    ResponseStatus? MyResponseStatus,
+    int AcceptedDonorCount,
+    IReadOnlyList<RequestResponseDto> Responses,
     DateTime ExpiresAtUtc,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc

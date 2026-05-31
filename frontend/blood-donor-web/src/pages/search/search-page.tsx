@@ -1,5 +1,6 @@
 import { Badge, Box, Button, Field, Flex, Heading, Input, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { requestDonorContact } from "../../api/donor-contact";
 import { LocationPicker } from "../../components/location/location-picker";
 import { searchDonors, type DonorSearchResult } from "../../api/search";
 import { useAuth } from "../../context/auth-context";
@@ -13,7 +14,7 @@ const availabilityLabels: Record<number, string> = {
   1: "Available", 2: "Unavailable",
 };
 
-function DonorCard({ donor }: { donor: DonorSearchResult }) {
+function DonorCard({ donor, onRequestContact }: { donor: DonorSearchResult; onRequestContact: (donor: DonorSearchResult) => Promise<void> }) {
   const isAvailable = donor.availabilityStatus === 1;
   return (
     <Box bg="white" p={5} borderRadius="xl" borderWidth="1px" shadow="sm">
@@ -23,6 +24,7 @@ function DonorCard({ donor }: { donor: DonorSearchResult }) {
             <Text fontWeight="bold" color="red.600">{bloodGroupLabels[donor.bloodGroup] ?? "?"}</Text>
           </Box>
           <Box>
+            <Text fontWeight="semibold" color="gray.800">{donor.fullName}</Text>
             <Text fontWeight="semibold" color="gray.800">{donor.city}{donor.area ? `, ${donor.area}` : ""}</Text>
             <Text fontSize="sm" color="gray.500">{donor.distanceKm.toFixed(1)} km away</Text>
           </Box>
@@ -35,6 +37,16 @@ function DonorCard({ donor }: { donor: DonorSearchResult }) {
         <Box>
           <Text fontSize="xs" color="gray.500">Total Donations</Text>
           <Text fontWeight="semibold">{donor.totalDonations}</Text>
+        </Box>
+        <Box>
+          <Text fontSize="xs" color="gray.500">Contact</Text>
+          {donor.phone ? (
+            <Text fontWeight="semibold">{donor.phone}</Text>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => void onRequestContact(donor)}>
+              Request Contact
+            </Button>
+          )}
         </Box>
       </Flex>
     </Box>
@@ -80,6 +92,15 @@ export function SearchPage() {
       toast.error("Search failed", "Could not search for donors. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestContact = async (donor: DonorSearchResult) => {
+    try {
+      await requestDonorContact(auth, donor.userId, `Please contact me about donating ${bloodGroupLabels[donor.bloodGroup] ?? "blood"}.`);
+      toast.success("Contact request sent", `The donor ${donor.fullName} has been notified.`);
+    } catch {
+      toast.error("Request failed", "Could not notify the donor. Please try again.");
     }
   };
 
@@ -134,7 +155,7 @@ export function SearchPage() {
             {items.length > 0 ? `${items.length} Donor${items.length !== 1 ? "s" : ""} Found` : "No donors found"}
           </Heading>
           {items.map((donor) => (
-            <DonorCard key={donor.userId} donor={donor} />
+            <DonorCard key={donor.userId} donor={donor} onRequestContact={handleRequestContact} />
           ))}
         </Stack>
       )}

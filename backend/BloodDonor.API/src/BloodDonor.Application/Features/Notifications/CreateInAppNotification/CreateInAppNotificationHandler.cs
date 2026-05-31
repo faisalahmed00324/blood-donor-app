@@ -2,6 +2,7 @@ using BloodDonor.Application.Abstractions.Notifications;
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Entities;
 using BloodDonor.Domain.Enums;
 
@@ -11,6 +12,7 @@ public sealed class CreateInAppNotificationHandler(
     IAppDbContext dbContext,
     INotificationDispatcher notificationDispatcher,
     IDateTimeProvider dateTimeProvider)
+    : IRequestHandler<CreateInAppNotificationCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(CreateInAppNotificationCommand command, CancellationToken cancellationToken)
     {

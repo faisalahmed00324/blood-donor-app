@@ -1,12 +1,13 @@
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Enums;
 using BloodDonor.Domain.Rules;
 using Microsoft.EntityFrameworkCore;
 
 namespace BloodDonor.Application.Features.Search.SearchDonors;
 
-public sealed class SearchDonorsHandler(IAppDbContext dbContext)
+public sealed class SearchDonorsHandler(IAppDbContext dbContext) : IRequestHandler<SearchDonorsQuery, PagedResult<DonorSearchResultDto>>
 {
     public async Task<Result<PagedResult<DonorSearchResultDto>>> Handle(SearchDonorsQuery query, CancellationToken cancellationToken)
     {
@@ -27,12 +28,15 @@ public sealed class SearchDonorsHandler(IAppDbContext dbContext)
             .Select(x => new
             {
                 x.UserId,
+                x.User.FullName,
+                x.User.Phone,
                 x.BloodGroup,
                 x.City,
                 x.Area,
                 x.Latitude,
                 x.Longitude,
                 x.AvailabilityStatus,
+                x.IsPhoneVisible,
                 x.TotalDonations
             })
             .ToListAsync(cancellationToken);
@@ -43,12 +47,15 @@ public sealed class SearchDonorsHandler(IAppDbContext dbContext)
                 var distance = CalculateDistanceKm((double)query.Latitude, (double)query.Longitude, (double)x.Latitude, (double)x.Longitude);
                 return new DonorSearchResultDto(
                     x.UserId,
+                    x.FullName,
                     x.BloodGroup,
                     x.City,
                     x.Area,
                     x.Latitude,
                     x.Longitude,
                     x.AvailabilityStatus,
+                    x.IsPhoneVisible,
+                    x.IsPhoneVisible ? x.Phone : null,
                     x.TotalDonations,
                     distance);
             })

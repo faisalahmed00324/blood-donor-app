@@ -14,3 +14,5 @@ public sealed record UpsertMyProfileRequest(
 );
 
 public sealed record UpdateAvailabilityRequest(AvailabilityStatus AvailabilityStatus);
+
+public sealed record RequestDonorContactBody(string? Message);

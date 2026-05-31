@@ -1,3 +1,4 @@
+using BloodDonor.Application.Messaging;
 using BloodDonor.Domain.Enums;
 
 namespace BloodDonor.Application.Features.Notifications.CreateInAppNotification;
@@ -8,4 +9,4 @@ public sealed record CreateInAppNotificationCommand(
     string Title,
     string Message,
     string? ActionUrl = null
-);
+) : IRequest<Guid>;
