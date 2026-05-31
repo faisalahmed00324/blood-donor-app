@@ -8,6 +8,9 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   userRole: string | null;
   hasRole: (role: string) => boolean;
+  canSeek: boolean;
+  canManageDonorProfile: boolean;
+  hasDonorProfile: boolean;
 };
 
 const AUTH_STORAGE_KEY = "bloodconnect_auth";
@@ -64,6 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: auth !== null,
     userRole: auth?.role ?? null,
     hasRole: (role: string) => auth?.role === role,
+    canSeek: auth?.canSeek ?? false,
+    canManageDonorProfile: auth?.canManageDonorProfile ?? false,
+    hasDonorProfile: auth?.hasDonorProfile ?? false,
   }), [auth, setAuth, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

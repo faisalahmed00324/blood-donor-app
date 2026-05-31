@@ -7,5 +7,8 @@ public sealed record AuthTokensResponse(
     DateTime RefreshTokenExpiresAtUtc,
     Guid UserId,
     string Email,
-    string Role
+    string Role,
+    bool CanSeek,
+    bool CanManageDonorProfile,
+    bool HasDonorProfile
 );

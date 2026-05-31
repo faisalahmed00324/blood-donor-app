@@ -12,6 +12,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { LocationPicker } from "../../components/location/location-picker";
 import { getMyProfile, updateAvailability, upsertMyProfile } from "../../api/donors";
 import { useAuth } from "../../context/auth-context";
 import { useToast } from "../../context/toast-context";
@@ -37,12 +38,11 @@ export function DonorProfilePage() {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const [bloodGroup, setBloodGroup] = useState("8");
   const [dateOfBirth, setDateOfBirth] = useState("1995-01-01");
   const [weightKg, setWeightKg] = useState("60");
-  const [latitude, setLatitude] = useState("23.8103");
-  const [longitude, setLongitude] = useState("90.4125");
   const [city, setCity] = useState("Dhaka");
   const [area, setArea] = useState("");
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
@@ -57,8 +57,7 @@ export function DonorProfilePage() {
         setBloodGroup(String(profile.bloodGroup));
         setDateOfBirth(profile.dateOfBirth.split("T")[0]);
         setWeightKg(String(profile.weightKg));
-        setLatitude(String(profile.latitude));
-        setLongitude(String(profile.longitude));
+        setLocation({ latitude: profile.latitude, longitude: profile.longitude });
         setCity(profile.city);
         setArea(profile.area ?? "");
         setIsPhoneVisible(profile.isPhoneVisible);
@@ -78,6 +77,7 @@ export function DonorProfilePage() {
     if (!city.trim()) e.city = "City is required.";
     if (!dateOfBirth) e.dateOfBirth = "Date of birth is required.";
     if (Number(weightKg) < 50) e.weightKg = "Minimum weight is 50 kg.";
+    if (!location) e.location = "Location is required.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -97,8 +97,8 @@ export function DonorProfilePage() {
         bloodGroup: Number(bloodGroup),
         dateOfBirth,
         weightKg: Number(weightKg),
-        latitude: Number(latitude),
-        longitude: Number(longitude),
+        latitude: location!.latitude,
+        longitude: location!.longitude,
         city,
         area: area || undefined,
         isPhoneVisible,
@@ -208,20 +208,11 @@ export function DonorProfilePage() {
                   </Field.Root>
                 </Box>
               </Flex>
-              <Flex gap={4} wrap="wrap" mt={4}>
-                <Box flex="1" minW="200px">
-                  <Field.Root>
-                    <Field.Label fontWeight="medium">Latitude</Field.Label>
-                    <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} size="lg" />
-                  </Field.Root>
-                </Box>
-                <Box flex="1" minW="200px">
-                  <Field.Root>
-                    <Field.Label fontWeight="medium">Longitude</Field.Label>
-                    <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} size="lg" />
-                  </Field.Root>
-                </Box>
-              </Flex>
+              <Field.Root invalid={!!errors.location} mt={4}>
+                <Field.Label fontWeight="medium">Donation Location</Field.Label>
+                <LocationPicker value={location} onChange={(nextLocation) => { setLocation(nextLocation); clearError("location"); }} />
+                {errors.location && <Field.ErrorText>{errors.location}</Field.ErrorText>}
+              </Field.Root>
             </Box>
 
             <Separator />

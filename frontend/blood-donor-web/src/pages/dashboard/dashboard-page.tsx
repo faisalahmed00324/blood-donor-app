@@ -12,7 +12,7 @@ function StatCard({ label, value, color = "gray.800" }: { label: string; value: 
 }
 
 export function DashboardPage() {
-  const { auth, userRole } = useAuth();
+  const { auth, userRole, canSeek, canManageDonorProfile, hasDonorProfile } = useAuth();
 
   if (!auth) return null;
 
@@ -41,12 +41,12 @@ export function DashboardPage() {
       <Box bg="white" p={6} borderRadius="xl" borderWidth="1px" shadow="sm">
         <Heading size="md" mb={4} color="gray.700">Quick Actions</Heading>
         <Flex gap={3} wrap="wrap">
-          {userRole === "Donor" && (
+          {(canManageDonorProfile || hasDonorProfile) && (
             <Button asChild colorPalette="red" size="lg">
-              <Link to="/donor/profile">Update My Profile</Link>
+              <Link to="/donor/profile">{hasDonorProfile ? "Manage Donor Profile" : "Become a Donor"}</Link>
             </Button>
           )}
-          {(userRole === "Seeker" || userRole === "Hospital") && (
+          {canSeek && (
             <>
               <Button asChild colorPalette="red" size="lg">
                 <Link to="/requests">Create Request</Link>

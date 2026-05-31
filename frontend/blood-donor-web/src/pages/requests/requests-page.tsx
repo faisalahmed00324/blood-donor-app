@@ -1,5 +1,6 @@
 import { Badge, Box, Button, Field, Flex, Heading, Input, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { LocationPicker } from "../../components/location/location-picker";
 import { createRequest, listRequests, type BloodRequestDto } from "../../api/requests";
 import { useAuth } from "../../context/auth-context";
 import { useToast } from "../../context/toast-context";
@@ -9,7 +10,7 @@ const bloodGroupLabels: Record<number, string> = {
 };
 
 const statusLabels: Record<number, string> = {
-  0: "Pending", 1: "Active", 2: "Fulfilled", 3: "Expired", 4: "Cancelled",
+  1: "Open", 2: "Partially Fulfilled", 3: "Fulfilled", 4: "Expired", 5: "Cancelled",
 };
 
 const urgencyLabels: Record<number, string> = {
@@ -58,6 +59,7 @@ export function RequestsPage() {
   const [items, setItems] = useState<BloodRequestDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const [bloodGroup, setBloodGroup] = useState("8");
   const [unitsNeeded, setUnitsNeeded] = useState("1");
@@ -66,8 +68,6 @@ export function RequestsPage() {
   const [patientName, setPatientName] = useState("");
   const [hospitalName, setHospitalName] = useState("");
   const [hospitalAddress, setHospitalAddress] = useState("");
-  const [latitude, setLatitude] = useState("23.8103");
-  const [longitude, setLongitude] = useState("90.4125");
   const [contactPersonName, setContactPersonName] = useState("");
   const [contactPersonPhone, setContactPersonPhone] = useState("");
   const [requiredByDate, setRequiredByDate] = useState("");
@@ -94,6 +94,7 @@ export function RequestsPage() {
     if (!contactPersonName.trim()) e.contactPersonName = "Contact person is required.";
     if (!contactPersonPhone.trim()) e.contactPersonPhone = "Contact phone is required.";
     if (!requiredByDate) e.requiredByDate = "Required date is needed.";
+    if (!location) e.location = "Request location is required.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -117,8 +118,8 @@ export function RequestsPage() {
         patientName: patientName || undefined,
         hospitalName,
         hospitalAddress,
-        latitude: Number(latitude),
-        longitude: Number(longitude),
+        latitude: location!.latitude,
+        longitude: location!.longitude,
         contactPersonName,
         contactPersonPhone,
         requiredByDate,
@@ -223,20 +224,11 @@ export function RequestsPage() {
                 </Box>
               </Flex>
 
-              <Flex gap={4} wrap="wrap">
-                <Box flex="1" minW="200px">
-                  <Field.Root>
-                    <Field.Label fontWeight="medium">Latitude</Field.Label>
-                    <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} size="lg" />
-                  </Field.Root>
-                </Box>
-                <Box flex="1" minW="200px">
-                  <Field.Root>
-                    <Field.Label fontWeight="medium">Longitude</Field.Label>
-                    <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} size="lg" />
-                  </Field.Root>
-                </Box>
-              </Flex>
+              <Field.Root invalid={!!errors.location}>
+                <Field.Label fontWeight="medium">Hospital Location</Field.Label>
+                <LocationPicker value={location} onChange={(nextLocation) => { setLocation(nextLocation); clearError("location"); }} />
+                {errors.location && <Field.ErrorText>{errors.location}</Field.ErrorText>}
+              </Field.Root>
 
               <Flex gap={4} wrap="wrap">
                 <Box flex="1" minW="200px">

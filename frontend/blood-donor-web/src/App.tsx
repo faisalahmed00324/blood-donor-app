@@ -38,17 +38,17 @@ export default function App() {
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/donor/profile" element={
-                  <ProtectedRoute allowedRoles={["Donor"]}>
+                  <ProtectedRoute requireDonorProfileAccess>
                     <DonorProfilePage />
                   </ProtectedRoute>
                 } />
                 <Route path="/requests" element={
-                  <ProtectedRoute allowedRoles={["Seeker", "Hospital"]}>
+                  <ProtectedRoute requireCanSeek>
                     <RequestsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/search" element={
-                  <ProtectedRoute allowedRoles={["Seeker", "Hospital"]}>
+                  <ProtectedRoute requireCanSeek>
                     <SearchPage />
                   </ProtectedRoute>
                 } />

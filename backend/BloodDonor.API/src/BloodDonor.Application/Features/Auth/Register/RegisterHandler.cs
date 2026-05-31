@@ -72,6 +72,9 @@ public sealed class RegisterHandler(
             RefreshTokenExpiresAtUtc: refreshTokenExpiry,
             UserId: user.Id,
             Email: user.Email,
-            Role: user.Role.ToString()));
+            Role: user.Role.ToString(),
+            CanSeek: AuthCapabilities.CanSeek(user.Role),
+            CanManageDonorProfile: AuthCapabilities.CanManageDonorProfile(user.Role),
+            HasDonorProfile: false));
     }
 }

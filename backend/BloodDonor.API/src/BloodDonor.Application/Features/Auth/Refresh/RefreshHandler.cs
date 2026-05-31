@@ -54,6 +54,8 @@ public sealed class RefreshHandler(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        var hasDonorProfile = await dbContext.DonorProfiles.AnyAsync(x => x.UserId == user.Id, cancellationToken);
+
         return Result<AuthTokensResponse>.Success(new AuthTokensResponse(
             AccessToken: jwtTokenService.CreateAccessToken(user),
             RefreshToken: newRefreshTokenValue,
@@ -61,6 +63,9 @@ public sealed class RefreshHandler(
             RefreshTokenExpiresAtUtc: refreshTokenExpiry,
             UserId: user.Id,
             Email: user.Email,
-            Role: user.Role.ToString()));
+            Role: user.Role.ToString(),
+            CanSeek: AuthCapabilities.CanSeek(user.Role),
+            CanManageDonorProfile: AuthCapabilities.CanManageDonorProfile(user.Role),
+            HasDonorProfile: hasDonorProfile));
     }
 }

@@ -1,6 +1,7 @@
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Features.Auth;
 using BloodDonor.Domain.Entities;
 using BloodDonor.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +20,15 @@ public sealed class UpsertMyProfileHandler(
             return Result<DonorProfileResponse>.Failure(validation.Error!);
         }
 
-        var userExists = await dbContext.Users.AnyAsync(x => x.Id == command.UserId, cancellationToken);
-        if (!userExists)
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == command.UserId, cancellationToken);
+        if (user is null)
         {
             return Result<DonorProfileResponse>.Failure(new Error("Donor.UserNotFound", "User not found."));
+        }
+
+        if (!AuthCapabilities.CanManageDonorProfile(user.Role))
+        {
+            return Result<DonorProfileResponse>.Failure(new Error("Donor.Forbidden", "This user cannot create a donor profile."));
         }
 
         var now = dateTimeProvider.UtcNow;

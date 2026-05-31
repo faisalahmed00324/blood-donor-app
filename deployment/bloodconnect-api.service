@@ -1,0 +1,14 @@
+[Unit]
+Description=BloodConnect API
+After=network.target postgresql.service
+
+[Service]
+WorkingDirectory=__APP_ROOT__/api
+ExecStart=/usr/bin/dotnet __APP_ROOT__/api/BloodDonor.Api.dll
+Restart=always
+RestartSec=5
+User=bloodconnect
+EnvironmentFile=__APP_ROOT__/api/.env.production
+
+[Install]
+WantedBy=multi-user.target

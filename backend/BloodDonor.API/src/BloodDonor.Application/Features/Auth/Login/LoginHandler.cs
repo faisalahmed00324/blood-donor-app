@@ -53,6 +53,8 @@ public sealed class LoginHandler(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var accessToken = jwtTokenService.CreateAccessToken(user);
+        var hasDonorProfile = await dbContext.DonorProfiles.AnyAsync(x => x.UserId == user.Id, cancellationToken);
+
         return Result<AuthTokensResponse>.Success(new AuthTokensResponse(
             AccessToken: accessToken,
             RefreshToken: refreshTokenValue,
@@ -60,6 +62,9 @@ public sealed class LoginHandler(
             RefreshTokenExpiresAtUtc: refreshTokenExpiry,
             UserId: user.Id,
             Email: user.Email,
-            Role: user.Role.ToString()));
+            Role: user.Role.ToString(),
+            CanSeek: AuthCapabilities.CanSeek(user.Role),
+            CanManageDonorProfile: AuthCapabilities.CanManageDonorProfile(user.Role),
+            HasDonorProfile: hasDonorProfile));
     }
 }

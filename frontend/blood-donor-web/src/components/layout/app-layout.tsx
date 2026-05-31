@@ -8,24 +8,40 @@ type NavItem = {
   label: string;
   path: string;
   roles?: string[];
+  requiresCanSeek?: boolean;
+  requiresDonorProfileAccess?: boolean;
 };
 
 const navItems: NavItem[] = [
   { label: "Dashboard", path: "/dashboard" },
-  { label: "Profile", path: "/donor/profile", roles: ["Donor"] },
-  { label: "Requests", path: "/requests", roles: ["Seeker", "Hospital"] },
-  { label: "Search", path: "/search", roles: ["Seeker", "Hospital"] },
+  { label: "Donor Profile", path: "/donor/profile", requiresDonorProfileAccess: true },
+  { label: "Requests", path: "/requests", requiresCanSeek: true },
+  { label: "Search", path: "/search", requiresCanSeek: true },
   { label: "Notifications", path: "/notifications" },
 ];
 
 export function AppLayout() {
-  const { auth, logout, userRole } = useAuth();
+  const { auth, logout, userRole, canSeek, canManageDonorProfile, hasDonorProfile } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const filteredNavItems = navItems.filter(
-    (item) => !item.roles || (userRole && item.roles.includes(userRole))
+    (item) => {
+      if (item.roles && (!userRole || !item.roles.includes(userRole))) {
+        return false;
+      }
+
+      if (item.requiresCanSeek && !canSeek) {
+        return false;
+      }
+
+      if (item.requiresDonorProfileAccess && !(canManageDonorProfile || hasDonorProfile)) {
+        return false;
+      }
+
+      return true;
+    }
   );
 
   const handleLogout = () => {

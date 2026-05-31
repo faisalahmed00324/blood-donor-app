@@ -21,7 +21,7 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const toaster = createToaster({ placement: "top-end", pauseOnPageIdle: true });
+const toaster = createToaster({ placement: "bottom", pauseOnPageIdle: true });
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback((title: string, description: string, type: ToastType) => {

@@ -25,6 +25,9 @@ export type AuthResponse = {
   userId: string;
   email: string;
   role: string;
+  canSeek: boolean;
+  canManageDonorProfile: boolean;
+  hasDonorProfile: boolean;
 };
 
 export type DonorProfileResponse = {

@@ -1,5 +1,6 @@
 import { Badge, Box, Button, Field, Flex, Heading, Input, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { LocationPicker } from "../../components/location/location-picker";
 import { searchDonors, type DonorSearchResult } from "../../api/search";
 import { useAuth } from "../../context/auth-context";
 import { useToast } from "../../context/toast-context";
@@ -44,24 +45,28 @@ export function SearchPage() {
   const { auth } = useAuth();
   const toast = useToast();
   const [recipientBloodGroup, setRecipientBloodGroup] = useState("8");
-  const [latitude, setLatitude] = useState("23.8103");
-  const [longitude, setLongitude] = useState("90.4125");
   const [radiusKm, setRadiusKm] = useState("10");
   const [items, setItems] = useState<DonorSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   if (!auth) return null;
 
   const onSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!location) {
+      toast.warning("Location required", "Use your location or pin a point on the map before searching.");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await searchDonors(
         auth,
         Number(recipientBloodGroup),
-        Number(latitude),
-        Number(longitude),
+        location.latitude,
+        location.longitude,
         Number(radiusKm)
       );
       setItems(response.items);
@@ -110,20 +115,10 @@ export function SearchPage() {
               </Box>
             </Flex>
 
-            <Flex gap={4} wrap="wrap">
-              <Box flex="1" minW="200px">
-                <Field.Root>
-                  <Field.Label fontWeight="medium">Latitude</Field.Label>
-                  <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} size="lg" />
-                </Field.Root>
-              </Box>
-              <Box flex="1" minW="200px">
-                <Field.Root>
-                  <Field.Label fontWeight="medium">Longitude</Field.Label>
-                  <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} size="lg" />
-                </Field.Root>
-              </Box>
-            </Flex>
+            <Field.Root>
+              <Field.Label fontWeight="medium">Search Location</Field.Label>
+              <LocationPicker value={location} onChange={setLocation} />
+            </Field.Root>
 
             <Button type="submit" colorPalette="red" size="lg" loading={loading}>
               Search Donors

@@ -1,8 +1,10 @@
 using BloodDonor.Application.Abstractions.Persistence;
 using BloodDonor.Application.Abstractions.Time;
 using BloodDonor.Application.Common;
+using BloodDonor.Application.Features.Auth;
 using BloodDonor.Domain.Entities;
 using BloodDonor.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace BloodDonor.Application.Features.Requests.CreateRequest;
 
@@ -12,6 +14,17 @@ public sealed class CreateRequestHandler(
 {
     public async Task<Result<BloodRequestDto>> Handle(CreateRequestCommand command, CancellationToken cancellationToken)
     {
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == command.SeekerId, cancellationToken);
+        if (user is null)
+        {
+            return Result<BloodRequestDto>.Failure(new Error("Request.UserNotFound", "User not found."));
+        }
+
+        if (!AuthCapabilities.CanSeek(user.Role))
+        {
+            return Result<BloodRequestDto>.Failure(new Error("Request.Forbidden", "This user cannot create blood requests."));
+        }
+
         if (command.UnitsNeeded < 1)
         {
             return Result<BloodRequestDto>.Failure(new Error("Request.InvalidUnits", "Units needed must be at least 1."));
