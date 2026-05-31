@@ -12,17 +12,19 @@ backend/
       BloodDonor.Api/
         Endpoints/
           Auth/
-            RegisterEndpoint.cs
-            LoginEndpoint.cs
+            AuthEndpoints.cs
+          Admin/
+            AdminEndpoints.cs
           Donors/
-            GetMyProfileEndpoint.cs
-            UpdateMyProfileEndpoint.cs
+            DonorEndpoints.cs
           Requests/
-            CreateRequestEndpoint.cs
-            RespondToRequestEndpoint.cs
+            RequestEndpoints.cs
+          Search/
+            SearchEndpoints.cs
+          Notifications/
+            NotificationEndpoints.cs
         Middleware/
           ExceptionMiddleware.cs
-          RequestLoggingMiddleware.cs
         DependencyInjection/
           ApiServiceCollection.cs
         Program.cs
@@ -44,27 +46,69 @@ backend/
               RegisterCommand.cs
               RegisterHandler.cs
               RegisterValidator.cs
-              RegisterResult.cs
             Login/
               LoginCommand.cs
               LoginHandler.cs
-              LoginResult.cs
+            Refresh/
+              RefreshCommand.cs
+              RefreshHandler.cs
+          Admin/
+            ListUsers/
+              ListUsersQuery.cs
+              ListUsersHandler.cs
+              AdminUserDto.cs
+            DeactivateUser/
+              DeactivateUserCommand.cs
+              DeactivateUserHandler.cs
+            ListRequests/
+              ListAdminRequestsQuery.cs
+              ListAdminRequestsHandler.cs
+              AdminRequestDto.cs
+            ListDonorProfiles/
+              ListDonorProfilesQuery.cs
+              ListDonorProfilesHandler.cs
+              AdminDonorProfileDto.cs
           Donors/
             GetMyProfile/
               GetMyProfileQuery.cs
               GetMyProfileHandler.cs
-            UpdateMyProfile/
-              UpdateMyProfileCommand.cs
-              UpdateMyProfileHandler.cs
-              UpdateMyProfileValidator.cs
+            UpsertMyProfile/
+              UpsertMyProfileCommand.cs
+              UpsertMyProfileHandler.cs
+              UpsertMyProfileValidator.cs
+            UpdateAvailability/
+              UpdateAvailabilityCommand.cs
+              UpdateAvailabilityHandler.cs
           Requests/
             CreateRequest/
               CreateRequestCommand.cs
               CreateRequestHandler.cs
-              CreateRequestValidator.cs
+            ListRequests/
+              ListRequestsQuery.cs
+              ListRequestsHandler.cs
+            UpdateRequestStatus/
+              UpdateRequestStatusCommand.cs
+              UpdateRequestStatusHandler.cs
             RespondToRequest/
               RespondToRequestCommand.cs
               RespondToRequestHandler.cs
+          Search/
+            SearchDonors/
+              SearchDonorsQuery.cs
+              SearchDonorsHandler.cs
+              DonorSearchResultDto.cs
+          Notifications/
+            CreateInAppNotification/
+              CreateInAppNotificationCommand.cs
+              CreateInAppNotificationHandler.cs
+            ListMyNotifications/
+              ListMyNotificationsQuery.cs
+              ListMyNotificationsHandler.cs
+          Messaging/
+            IRequest.cs
+            IRequestHandler.cs
+            IApplicationDispatcher.cs
+            ApplicationDispatcher.cs
         Common/
           Result.cs
           Error.cs
@@ -96,13 +140,10 @@ backend/
             UserConfiguration.cs
             DonorProfileConfiguration.cs
             BloodRequestConfiguration.cs
-          Migrations/
         Authentication/
           JwtTokenService.cs
-          PasswordHasher.cs
+          PasswordHasherAdapter.cs
         Notifications/
-          EmailNotificationDispatcher.cs
-          SmsNotificationDispatcher.cs
           InAppNotificationDispatcher.cs
         Time/
           DateTimeProvider.cs
@@ -135,11 +176,11 @@ backend/
 
 ## Minimal Coding Rules
 
-- One use case per folder (`Command/Query`, `Handler`, `Validator`, `Result`).
+- One use case per folder (`Command/Query`, `Handler`, optional `Validator`, DTOs where needed).
 - Keep handlers small; move non-trivial logic to domain rules or services.
 - Use immutable request models where possible.
 - Return consistent `Result` objects from handlers.
-- Keep endpoint code focused on parse -> call handler -> map response.
+- Keep endpoint code focused on parse -> dispatch request -> map response.
 
 ## Base Interfaces (Starter Set)
 
@@ -180,20 +221,37 @@ public interface INotificationDispatcher
 
 ```csharp
 app.MapPost("/api/auth/register", async (
-    RegisterCommand command,
-    RegisterHandler handler,
+    RegisterRequest request,
+    IApplicationDispatcher dispatcher,
     CancellationToken ct) =>
 {
-    var result = await handler.Handle(command, ct);
+    var result = await dispatcher.Send(
+        new RegisterCommand(request.Email, request.Password, request.FullName, request.Phone, request.Role),
+        ct);
+
     return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
 });
 ```
 
+For role-restricted groups, prefer endpoint-group authorization:
+
+```csharp
+var group = app.MapGroup("/api/admin")
+    .WithTags("Admin")
+    .RequireAuthorization("AdminOnly");
+```
+
 ## Dependency Injection Pattern
 
-- `ApplicationServiceCollection`: register handlers, validators.
+- `ApplicationServiceCollection`: register dispatcher and handler interfaces, preferably by assembly scanning.
 - `InfrastructureServiceCollection`: register DB context, repositories, external adapters.
-- `ApiServiceCollection`: auth, CORS, rate limiting, OpenAPI, endpoint groups.
+- `ApiServiceCollection`: CORS, rate limiting, OpenAPI, endpoint groups.
+
+Authorization details that fit the current app well:
+
+- JWT contains `ClaimTypes.Role` and `ClaimTypes.NameIdentifier`
+- `InfrastructureServiceCollection` defines role policies such as `AdminOnly`
+- JWT validation can reject inactive users to make deactivation effective immediately on later requests
 
 In `Program.cs`, call in this order:
 1. `AddApplication()`
@@ -215,6 +273,7 @@ In `Program.cs`, call in this order:
 ## Low-RAM Design Guidance
 
 - Avoid heavyweight mediator frameworks unless needed.
+- A lightweight in-process dispatcher interface is enough for MVP endpoint decoupling.
 - Keep reflection-heavy libraries minimal.
 - Use projection queries (`Select`) for read endpoints.
 - Add pagination defaults to all list endpoints.
@@ -226,5 +285,6 @@ In `Program.cs`, call in this order:
 2. Add shared `Result` and basic validation pipeline.
 3. Implement auth module end-to-end (register/login/refresh).
 4. Implement donor profile and request modules using the same pattern.
-5. Add tests for blood compatibility and cooldown logic.
-6. Add rate limiting, exception middleware, and health checks.
+5. Add admin read/list modules once base roles are stable.
+6. Add tests for blood compatibility and cooldown logic.
+7. Add rate limiting, exception middleware, and health checks.

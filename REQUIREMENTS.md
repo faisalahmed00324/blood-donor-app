@@ -89,7 +89,8 @@ Become the most trusted and widely-used blood donor network, reducing preventabl
 - Auto-cooldown enforcement (56 days after donation for whole blood)
 - Last donation date tracking
 - Preferred contact method (call, SMS, in-app)
-- Privacy controls (hide phone number until request accepted)
+- Privacy controls (donor can hide phone number in search results)
+- If donor phone is hidden, seekers can send an in-app contact request to the donor
 
 #### 4.3 Blood Request System
 
@@ -107,7 +108,9 @@ Become the most trusted and widely-used blood donor network, reducing preventabl
   - Prescription/document upload (image/PDF) for verification
 - Request statuses: Open → Partially Fulfilled → Fulfilled → Expired → Cancelled
 - Auto-expiry after configurable days (default: 7 days)
-- Seeker can close/cancel request manually
+- Request owner can mark a request as fulfilled or cancel it manually
+- Donors can respond to open requests with Accept / Decline / Withdraw
+- Request details include donor response summary for the requester
 
 #### 4.4 Smart Search & Matching
 
@@ -115,6 +118,9 @@ Become the most trusted and widely-used blood donor network, reducing preventabl
   - Blood group (exact match + compatible types)
   - Location radius (5km, 10km, 25km, 50km, city-wide)
   - Availability status
+- Search results show donor name, distance, donation count, availability, and contact option
+- If donor phone is visible, seeker sees the number directly in results
+- If donor phone is hidden, seeker can use Request Contact to notify the donor in-app
 - Blood compatibility matching:
   - O- → universal donor (shown for all requests)
   - AB+ → universal recipient (can receive from all)
@@ -124,12 +130,12 @@ Become the most trusted and widely-used blood donor network, reducing preventabl
 
 #### 4.5 Request Response Workflow
 
-1. Donor receives notification of matching request
-2. Donor views request details (hospital, urgency, units needed)
-3. Donor accepts or declines
-4. On accept → seeker is notified, contact info exchanged
-5. After donation → donor marks as donated, cooldown starts
-6. Seeker confirms donation received, request units updated
+1. Seeker or hospital creates a blood request
+2. Compatible donors can browse open requests available to them
+3. Donor views request details and accepts, declines, or withdraws response
+4. Request owner sees accepted donor responses and can contact the donor using shared contact details
+5. If donor phone is hidden in search, seeker can send an in-app contact request to the donor
+6. Request owner can mark the request fulfilled or cancel it manually
 
 #### 4.6 Notifications
 
@@ -442,23 +448,24 @@ BloodDrive (N) ──── (N) User           [as attendees]
 | GET    | /api/donors/me              | Get my donor profile                            |
 | PUT    | /api/donors/me              | Update my donor profile                         |
 | PUT    | /api/donors/me/availability | Toggle availability                             |
+| POST   | /api/donors/{id}/contact-request | Send in-app contact request to donor       |
 | GET    | /api/donors/me/history      | My donation history                             |
-| GET    | /api/donors/search          | Search donors (by blood group, location, radius) |
 | GET    | /api/donors/{id}            | Get donor public profile                        |
+
+### Search
+
+| Method | Endpoint                    | Description                                             |
+| ------ | --------------------------- | ------------------------------------------------------- |
+| GET    | /api/search/donors          | Search donors by compatible blood group and radius      |
 
 ### Blood Requests
 
 | Method | Endpoint                           | Description                   |
 | ------ | ---------------------------------- | ----------------------------- |
 | POST   | /api/requests                      | Create blood request          |
-| GET    | /api/requests                      | List requests (with filters)  |
-| GET    | /api/requests/{id}                 | Get request details           |
-| PUT    | /api/requests/{id}                 | Update request                |
-| PUT    | /api/requests/{id}/cancel          | Cancel request                |
+| GET    | /api/requests                      | List requests (`mineOnly`, `availableForMe`, filters) |
+| PUT    | /api/requests/{id}                 | Update request status (`Fulfilled` or `Cancelled`) |
 | POST   | /api/requests/{id}/respond         | Donor responds to request     |
-| PUT    | /api/requests/{id}/responses/{rid} | Update response status        |
-| GET    | /api/requests/my                   | My created requests (seeker)  |
-| GET    | /api/requests/my-responses         | My responses (donor)          |
 
 ### Donations
 
@@ -485,14 +492,19 @@ BloodDrive (N) ──── (N) User           [as attendees]
 
 ### Admin
 
-| Method | Endpoint                         | Description                   |
-| ------ | -------------------------------- | ----------------------------- |
-| GET    | /api/admin/dashboard             | Dashboard stats               |
-| GET    | /api/admin/users                 | List users (with filters)     |
-| PUT    | /api/admin/users/{id}/suspend    | Suspend user                  |
-| PUT    | /api/admin/users/{id}/activate   | Activate user                 |
-| GET    | /api/admin/requests              | All requests (moderation)     |
-| PUT    | /api/admin/requests/{id}/flag    | Flag request                  |
+| Method | Endpoint                              | Description                                |
+| ------ | ------------------------------------- | ------------------------------------------ |
+| GET    | /api/admin/users                      | List all users with filters                |
+| POST   | /api/admin/users/{id}/deactivate      | Deactivate user                            |
+| GET    | /api/admin/requests                   | View all requests with filters             |
+| GET    | /api/admin/donors                     | View all donor profiles with filters       |
+
+Admin scope currently implemented:
+
+- Web-only admin pages
+- Separate pages for users, requests, and donor profiles
+- Admin can deactivate users
+- Donor privacy rule still applies in admin donor views, so hidden phone numbers remain hidden
 
 ### Static Content
 

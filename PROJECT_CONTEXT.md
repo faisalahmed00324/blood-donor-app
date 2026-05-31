@@ -31,19 +31,21 @@ Implemented now:
 - Blood requests: create, list, update status, respond
 - Donor search with blood compatibility and radius filtering
 - Notifications: create in-app notification, list my notifications
+- Admin module: list users, deactivate users, list all requests, list all donor profiles
 - Frontend pages for auth, dashboard, donor profile, requests, donor search, notifications
+- Frontend admin pages for users, requests, and donor profiles
 - JWT auth, CORS, rate limiting, Swagger in development, exception middleware
 - Auth capability flags for UI/feature access: `canSeek`, `canManageDonorProfile`, `hasDonorProfile`
 - Seekers can become donors by creating a donor profile without losing seeker permissions
 - Donors can also create blood requests
 - Map-based location picker with browser geolocation + click-to-pin fallback on key frontend forms
+- Admin-only authorization policy and inactive-user JWT rejection
 
 Planned in docs but not implemented yet:
 
 - Email verification
 - OTP / phone verification
 - Forgot/reset password
-- Admin module
 - Hospitals directory
 - Donation history endpoints
 - SignalR / real-time notifications
@@ -93,7 +95,7 @@ Startup sequence:
 5. Resolve `AppDbContext`
 6. Call `Database.EnsureCreatedAsync()`
 7. Add middleware: exception, CORS, rate limiter, auth, authorization
-8. Map endpoints: root, health, auth, donors, requests, search, notifications
+8. Map endpoints: root, health, auth, admin, donors, requests, search, notifications
 
 Important note:
 
@@ -144,6 +146,10 @@ Registered handlers:
 - `SearchDonorsHandler`
 - `CreateInAppNotificationHandler`
 - `ListMyNotificationsHandler`
+- `ListUsersHandler`
+- `DeactivateUserHandler`
+- `ListAdminRequestsHandler`
+- `ListDonorProfilesHandler`
 
 ### Domain Layer
 
@@ -225,6 +231,9 @@ Group: `/api/donors` and requires auth
   - allowed for base roles `Donor` and `Seeker`
 - `PUT /me/availability`
   - update availability unless donor is still in cooldown
+- `POST /{donorUserId}/contact-request`
+  - send an in-app contact request to a donor
+  - used when donor phone is hidden in search results
 
 ### Requests
 
@@ -234,11 +243,14 @@ Group: `/api/requests` and requires auth
   - create blood request
   - allowed for users with seek capability, including `Donor`, `Seeker`, `Hospital`, `Admin`
 - `GET /`
-  - list requests with optional `page`, `pageSize`, `status`, `bloodGroup`
+  - list requests with optional `page`, `pageSize`, `status`, `bloodGroup`, `mineOnly`, `availableForMe`
+  - `mineOnly=true` returns requests created by current user
+  - `availableForMe=true` returns open requests for compatible donors other than the current user
 - `PUT /{requestId}`
-  - update request status manually
+  - update request status manually to `Cancelled` or `Fulfilled`
 - `POST /{requestId}/respond`
-  - donor response status update
+  - donor response status update (`Accepted`, `Declined`, `Withdrawn`, `Completed`)
+  - donor cannot respond to their own request
 
 ### Search
 
@@ -248,6 +260,8 @@ Group: `/api/search` and requires auth
   - query params: `recipientBloodGroup`, `latitude`, `longitude`, `radiusKm`, `page`, `pageSize`
   - filters available donors by compatible blood group and radius
   - sorts by distance, then donation count desc
+  - returns donor name and contact metadata
+  - phone is only included when donor has chosen to make it visible
 
 ### Notifications
 
@@ -261,6 +275,21 @@ Group: `/api/notifications` and requires auth
 Important note:
 
 - `POST /api/notifications` is authenticated but currently not restricted to creating notifications only for the caller; it accepts `body.UserId`.
+
+### Admin
+
+Group: `/api/admin` and requires admin role
+
+- `GET /users`
+  - list all users with optional `page`, `pageSize`, `role`, `isActive`, `search`
+- `POST /users/{userId}/deactivate`
+  - deactivates a user account
+  - current admin cannot deactivate their own account
+- `GET /requests`
+  - list all requests with optional `page`, `pageSize`, `status`, `bloodGroup`, `search`
+- `GET /donors`
+  - list all donor profiles with optional `page`, `pageSize`, `bloodGroup`, `availabilityStatus`, `city`, `search`
+  - donor phone is returned only when `IsPhoneVisible` is true
 
 ## Enum Values Used in Backend and Frontend
 
@@ -367,6 +396,9 @@ Protected routes:
 - `/requests` for users with seek capability
 - `/search` for users with seek capability
 - `/notifications`
+- `/admin/users` for `Admin`
+- `/admin/requests` for `Admin`
+- `/admin/donors` for `Admin`
 
 Fallback route:
 

@@ -85,11 +85,31 @@ Approximate baseline:
 ### Phase 2: Core MVP
 - Auth flows (register/login/refresh/email verify/OTP).
 - Donor profile management and availability logic.
-- Blood request lifecycle and matching basics.
+- Blood request lifecycle is implemented:
+  - request creation
+  - request listing for owners and compatible donors
+  - donor accept/decline/withdraw response flow
+  - requester fulfilled/cancelled status management
+- Donor search and matching basics are implemented:
+  - compatible donor search by radius
+  - donor availability filtering
+  - donor contact metadata in search results
 
 ### Phase 3: Communication and Admin
-- In-app notifications + email/SMS integration.
-- Admin dashboard basics (users, requests moderation).
+- In-app notifications are implemented.
+- Donor contact request workflow is implemented for donors who hide phone numbers in search.
+- Email/SMS integration remains future work.
+- Admin web module is partially implemented:
+  - list all users
+  - deactivate users
+  - view all requests
+  - view all donor profiles
+- Remaining admin work:
+  - activate/reactivate users if needed
+  - request moderation actions beyond listing
+  - admin analytics/dashboard metrics
+  - richer pagination and management workflows in admin UI
+  - richer notification management and delivery tracking
 
 ### Phase 4: Hardening
 - Add DB indexes based on real query patterns.
@@ -100,4 +120,4 @@ Approximate baseline:
 - Stable operation within 1GB memory envelope.
 - P95 API latency target maintained for MVP paths.
 - Frontend remains responsive on mobile and low bandwidth.
-- Notification workflows reliable under moderate spikes.
+- Notification workflows and donor contact requests remain reliable under moderate spikes.

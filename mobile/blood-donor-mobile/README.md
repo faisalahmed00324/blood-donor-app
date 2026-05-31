@@ -18,5 +18,5 @@ npm run start
 ## Notes
 
 - Uses the same backend API as the web app.
-- Supports auth, dashboard, donor profile, requests, search, and notifications.
+- Supports auth, dashboard, donor profile, requests, donor request responses, donor search, donor contact requests, and notifications.
 - Uses device location permission and map pinning via `react-native-maps`.
